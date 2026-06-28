@@ -10,7 +10,7 @@
 
 <!-- 영상은 GitHub에서 클릭 시 페이지 내 재생됩니다 -->
 
-https://github.com/<사용자명>/<레포명>/raw/main/docs/demo-minwon-pixel-agent.mp4
+![시연 영상](https://github.com/jinyoung-plus/minwon-pixel-agents/raw/main/docs/demo-minwon-pixel-agent.mp4)
 
 > (영상 파일: `docs/demo-minwon-pixel-agent.mp4`)
 
