@@ -7,7 +7,7 @@
 ---
 
 
-https://github.com/user-attachments/assets/7fb98290-6572-4a93-94c0-f773629e85d9
+
 
 
 
@@ -16,7 +16,7 @@ https://github.com/user-attachments/assets/7fb98290-6572-4a93-94c0-f773629e85d9
 
 <!-- 영상은 GitHub에서 클릭 시 페이지 내 재생됩니다 -->
 
-
+https://github.com/user-attachments/assets/7fb98290-6572-4a93-94c0-f773629e85d9
 
 > (영상 파일: `docs/demo-minwon-pixel-agent.mp4`)
 
