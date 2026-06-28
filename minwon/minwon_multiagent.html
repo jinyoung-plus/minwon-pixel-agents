@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>민원 답변 멀티에이전트 서비스</title>
+<style>
+  :root{
+    --paper:#F4F6F9; --panel:#FFFFFF; --ink:#16202E; --muted:#5B6776;
+    --line:#E2E6EC; --line2:#EDF0F4;
+    --blue:#2563C9; --blue-d:#1B4FA8; --green:#1E8E5A; --amber:#B26B12; --purple:#6A4DB0; --teal:#177C8E; --red:#C0392B;
+    --soft-blue:#EAF1FC; --soft-green:#E7F4EC; --soft-amber:#FBF2E3; --soft-red:#FBECEC; --soft-purple:#F1EDFA; --soft-teal:#E5F2F4;
+    --mono:ui-monospace,"SF Mono","Cascadia Code",Consolas,"D2Coding",monospace;
+    --sans:"Pretendard",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.55;-webkit-font-smoothing:antialiased;}
+  .topbar{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.86);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);}
+  .topbar-in{max-width:1120px;margin:0 auto;padding:11px 20px;display:flex;align-items:center;gap:14px;}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:15px;letter-spacing:-.01em;}
+  .brand .logo{width:26px;height:26px;border-radius:7px;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;}
+  .brand small{font-weight:600;color:var(--muted);font-size:11px;letter-spacing:.04em;}
+  .seg{margin-left:auto;display:inline-flex;background:#EEF1F5;border-radius:9px;padding:3px;gap:2px;}
+  .seg button{border:none;background:transparent;font-family:var(--sans);font-weight:700;font-size:12.5px;color:var(--muted);padding:7px 14px;border-radius:7px;cursor:pointer;transition:.12s;}
+  .seg button.active{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.06);}
+  .cfg-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--red);margin-left:6px;vertical-align:middle;}
+  .cfg-dot.ok{background:var(--green);}
+  .wrap{max-width:1120px;margin:0 auto;padding:26px 20px 80px;}
+  .screen{display:none;} .screen.active{display:block;}
+  h1{font-size:25px;line-height:1.15;margin:0 0 6px;letter-spacing:-.01em;font-weight:800;}
+  .eyebrow{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--blue);font-weight:700;margin:0 0 6px;}
+  .sub{color:var(--muted);margin:0 0 22px;font-size:14px;} .sub b{color:var(--ink);}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:16px;}
+  .panel.hidden{display:none;}
+  .panel-h{display:flex;align-items:center;gap:8px;font-weight:700;font-size:13px;margin:0 0 12px;}
+  .panel-h .n{font-family:var(--mono);font-size:11px;color:var(--blue);background:var(--soft-blue);border-radius:5px;padding:2px 7px;font-weight:700;}
+  label{display:block;font-size:12px;color:var(--muted);font-weight:600;margin:0 0 5px;}
+  input,select,textarea{width:100%;font-family:var(--sans);font-size:13px;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:8px;padding:9px 10px;outline:none;}
+  input:focus,select:focus,textarea:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--soft-blue);}
+  input.mono,select.mono,textarea.mono{font-family:var(--mono);font-size:12px;}
+  textarea{resize:vertical;line-height:1.55;}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+  .grid2{display:grid;grid-template-columns:1fr 120px;gap:12px;}
+  @media(max-width:640px){.row{grid-template-columns:1fr}.grid2{grid-template-columns:1fr}}
+  .hint{font-size:11.5px;color:var(--muted);}
+  .note{font-size:11.5px;color:var(--muted);margin-top:10px;line-height:1.6;}
+  .note code{font-family:var(--mono);background:#EEF1F5;padding:1px 5px;border-radius:4px;font-size:11px;}
+  .btn{font-family:var(--sans);font-weight:700;font-size:13px;border-radius:9px;padding:10px 16px;border:1px solid var(--line);background:#fff;color:var(--ink);cursor:pointer;transition:.12s;}
+  .btn:hover{border-color:#cfd6df;background:#fafbfc;}
+  .btn.primary{background:var(--blue);border-color:var(--blue);color:#fff;}
+  .btn.primary:hover{background:var(--blue-d);border-color:var(--blue-d);}
+  .btn:disabled{opacity:.5;cursor:not-allowed;}
+  .btn.lg{font-size:15px;padding:13px 26px;border-radius:11px;}
+  .u-input{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px;margin-bottom:16px;}
+  .u-input .qrow{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+  .u-input .qrow .t{font-weight:700;font-size:14px;}
+  .u-input .qrow .pick{margin-left:auto;font-size:12px;}
+  .u-input textarea{min-height:150px;font-size:14px;}
+  .u-actions{display:flex;align-items:center;gap:12px;margin-top:14px;flex-wrap:wrap;}
+  .u-actions .right{margin-left:auto;font-size:12px;color:var(--muted);}
+  .u-match{font-size:12px;color:var(--muted);margin-top:9px;min-height:16px;}
+  .stepper{display:none;background:linear-gradient(180deg,#fff,#fbfcfe);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:16px;}
+  .stepper.show{display:block;}
+  .stepper .status{font-weight:700;font-size:14px;margin-bottom:14px;display:flex;align-items:center;gap:9px;}
+  .spin{width:15px;height:15px;border:2.5px solid var(--soft-blue);border-top-color:var(--blue);border-radius:50%;animation:sp .7s linear infinite;}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+  @media(max-width:560px){.steps{grid-template-columns:1fr 1fr}}
+  .step{border:1px solid var(--line);border-radius:10px;padding:11px 12px;background:#fff;transition:.2s;}
+  .step .k{font-family:var(--mono);font-size:11px;color:var(--muted);}
+  .step .nm{font-weight:700;font-size:13px;margin-top:3px;}
+  .step .s{font-size:11px;color:var(--muted);margin-top:4px;}
+  .step.run{border-color:var(--blue);box-shadow:0 0 0 3px var(--soft-blue);} .step.run .s{color:var(--blue-d);font-weight:600;}
+  .step.done{border-color:var(--green);background:#FBFEFC;} .step.done .s{color:var(--green);} .step.done .nm::after{content:" ✓";color:var(--green);}
+  .result-grid{display:grid;grid-template-columns:1.5fr 1fr;gap:16px;margin-bottom:16px;}
+  @media(max-width:860px){.result-grid{grid-template-columns:1fr}}
+  .doc{background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;align-self:start;box-shadow:0 1px 3px rgba(16,32,46,.04);}
+  .doc-h{display:flex;align-items:center;gap:8px;padding:13px 18px;border-bottom:1px solid var(--line2);}
+  .doc-h .t{font-weight:800;font-size:14px;}
+  .doc-h .badge{font-size:11px;font-weight:700;color:var(--green);background:var(--soft-green);border-radius:20px;padding:3px 10px;}
+  .doc-h .tools{margin-left:auto;display:flex;gap:6px;}
+  .doc-h .tools button{font-size:12px;font-weight:700;border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:7px;padding:6px 11px;cursor:pointer;}
+  .doc-h .tools button:hover{background:#f7f8fa;}
+  .doc-b{padding:22px;white-space:pre-wrap;line-height:1.85;font-size:14px;color:#1c2737;}
+  .memo{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden;align-self:start;}
+  .memo-h{padding:13px 16px;border-bottom:1px solid var(--line2);font-weight:800;font-size:14px;background:#fbfcfe;}
+  .memo-b{padding:15px 16px;}
+  .memo-sec{margin-bottom:15px;} .memo-sec:last-child{margin-bottom:0;}
+  .memo-sec .h{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:7px;}
+  .pill{display:inline-block;font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:6px;margin:0 5px 5px 0;}
+  .p-blue{background:var(--soft-blue);color:var(--blue-d)} .p-green{background:var(--soft-green);color:var(--green)}
+  .p-amber{background:var(--soft-amber);color:#8A5410} .p-red{background:var(--soft-red);color:var(--red)} .p-gray{background:#F0F2F5;color:var(--muted)} .p-purple{background:var(--soft-purple);color:#4E3690}
+  .memo ul{margin:4px 0 0;padding-left:18px;font-size:12.5px;line-height:1.65;} .memo li{margin-bottom:3px;} .warn-li{color:#8A2A20;}
+  .gate{background:var(--soft-amber);border:1px solid #E7CF9A;color:#7A5410;border-radius:12px;padding:14px 16px;margin-bottom:16px;display:none;align-items:center;gap:12px;flex-wrap:wrap;}
+  .gate.show{display:flex;} .gate .btn{background:#fff;}
+  .err-box{background:var(--soft-red);border:1px solid #F0C9C5;color:#8A2A20;border-radius:10px;padding:11px 14px;font-size:12.5px;margin-bottom:16px;display:none;}
+  .mtbl{width:100%;border-collapse:collapse;font-size:12px;}
+  .mtbl th{text-align:left;color:var(--muted);font-weight:600;font-size:11px;padding:0 8px 8px;border-bottom:1px solid var(--line);}
+  .mtbl td{padding:7px 8px;border-bottom:1px solid var(--line2);vertical-align:middle;}
+  .mtbl tr:last-child td{border-bottom:none;}
+  .mtbl select,.mtbl input{padding:6px 7px;}
+  .col-slug{min-width:200px}.col-price{width:72px}.col-preset{width:140px}
+  .num-r{text-align:right;}
+  .role-badge{font-weight:700;white-space:nowrap;}
+  .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px;}
+  .graph{background:linear-gradient(180deg,#fff,#fbfcfe);border:1px solid var(--line);border-radius:14px;padding:22px 18px 16px;margin-bottom:16px;}
+  .glabel{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:700;text-align:center;margin-bottom:14px;}
+  .glabel b{color:var(--blue);}
+  .tier{display:flex;justify-content:center;}
+  .conn{display:flex;justify-content:center;align-items:center;height:22px;}
+  .conn .lbl{font-size:10px;font-family:var(--mono);color:var(--muted);}
+  .specs{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;width:100%;max-width:760px;position:relative;}
+  .specs::before{content:"";position:absolute;top:-12px;left:16.6%;right:16.6%;height:2px;background:var(--line);}
+  @media(max-width:620px){.specs{grid-template-columns:1fr}.specs::before{display:none}}
+  .specs4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;width:100%;max-width:940px;position:relative;}
+  .specs4::before{content:"";position:absolute;top:-12px;left:12.5%;right:12.5%;height:2px;background:var(--line);}
+  .specs4 .agent{min-width:0;max-width:none;}
+  @media(max-width:760px){.specs4{grid-template-columns:repeat(2,1fr)}.specs4::before{display:none}}
+  @media(max-width:460px){.specs4{grid-template-columns:1fr}}
+  .agent{border:1.5px solid var(--line);border-radius:11px;background:#fff;padding:12px 13px;min-width:185px;max-width:280px;transition:.2s;}
+  .agent.wide{max-width:430px;}
+  .agent .top{display:flex;align-items:center;gap:9px;}
+  .agent .ic{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:700;font-size:14px;color:#fff;flex:none;}
+  .agent .nm{font-weight:700;font-size:13.5px;line-height:1.2;}
+  .agent .rl{font-size:10.5px;color:var(--muted);margin-top:1px;}
+  .agent .st{margin-left:auto;font-size:10px;font-family:var(--mono);padding:2px 8px;border-radius:20px;background:#F0F2F5;color:var(--muted);white-space:nowrap;}
+  .agent .cost{font-family:var(--mono);font-size:10.5px;color:var(--muted);margin-top:8px;display:none;}
+  .agent .cost b{color:var(--amber);}
+  .ic-orch{background:var(--ink)} .ic-law{background:var(--teal)} .ic-prec{background:var(--purple)} .ic-tone{background:var(--amber)} .ic-draft{background:var(--blue)} .ic-crit{background:var(--green)}
+  .agent.run{border-color:var(--blue);box-shadow:0 0 0 4px var(--soft-blue);} .agent.run .st{background:var(--soft-blue);color:var(--blue-d);}
+  .agent.retry .st{background:var(--soft-amber);color:#8A5410;}
+  .agent.done{border-color:var(--green);} .agent.done .st{background:var(--soft-green);color:var(--green);} .agent.done .cost{display:block;}
+  .agent.err{border-color:var(--red);} .agent.err .st{background:var(--soft-red);color:var(--red);}
+  .loopwrap{display:flex;justify-content:center;margin-top:8px;}
+  .loopbadge{font-size:10.5px;font-family:var(--mono);color:var(--green);background:var(--soft-green);border:1px dashed #9ED3B4;border-radius:20px;padding:3px 11px;}
+  .loopbadge.active{color:var(--amber);background:var(--soft-amber);border-color:#E3C58A;}
+  .meter{display:flex;flex-wrap:wrap;align-items:center;gap:14px 24px;margin-top:18px;padding-top:16px;border-top:1px dashed var(--line);}
+  .meter .big{font-family:var(--mono);font-weight:700;font-size:22px;color:var(--amber);}
+  .meter .krw{font-family:var(--mono);font-size:15px;font-weight:700;}
+  .meter .lbl{font-size:11px;color:var(--muted);font-weight:600;display:block;}
+  .meter .tok{font-family:var(--mono);font-size:12px;color:var(--muted);}
+  details.scard{background:var(--panel);border:1px solid var(--line);border-radius:10px;margin-bottom:8px;overflow:hidden;}
+  details.scard summary{list-style:none;cursor:pointer;padding:11px 14px;display:flex;align-items:center;gap:10px;font-weight:600;font-size:13px;}
+  details.scard summary::-webkit-details-marker{display:none;}
+  details.scard summary .chip{width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#fff;font-family:var(--mono);font-weight:700;font-size:12px;flex:none;}
+  details.scard summary .meta{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--muted);}
+  details.scard summary .meta b{color:var(--amber);}
+  .scard-b{padding:0 14px 14px;} .scard-b textarea{min-height:120px;}
+  .out pre{font-family:var(--mono);font-size:12px;background:#0F1722;color:#D6E2F0;border-radius:8px;padding:12px;overflow-x:auto;line-height:1.5;margin:0;white-space:pre-wrap;word-break:break-word;}
+  .out .text{white-space:pre-wrap;line-height:1.6;font-size:13px;}
+  .acc-h{font-weight:700;font-size:13px;margin:0 0 10px;}
+  .sumtbl{width:100%;border-collapse:collapse;font-size:12.5px;}
+  .sumtbl th{text-align:left;color:var(--muted);font-weight:600;font-size:11px;padding:0 10px 8px;border-bottom:1px solid var(--line);}
+  .sumtbl td{padding:8px 10px;border-bottom:1px solid var(--line2);font-family:var(--mono);}
+  .sumtbl td.lbl{font-family:var(--sans);font-weight:600;}
+  .sumtbl tr.total td{border-top:2px solid var(--ink);border-bottom:none;font-weight:700;color:var(--amber);}
+  a{color:var(--blue);}
+  .pick{display:flex;align-items:center;gap:8px;}
+  .upload-btn{cursor:pointer;font-weight:700;font-size:12px;color:var(--blue-d);background:var(--soft-blue);border:1px solid #CFE0F7;border-radius:7px;padding:6px 10px;white-space:nowrap;}
+  .upload-btn:hover{background:#DEEAFB;}
+  .dropzone{margin-top:12px;border:1.5px dashed #C7D0DC;border-radius:12px;background:#FAFBFD;padding:16px;text-align:center;color:var(--muted);font-size:12.5px;cursor:pointer;transition:.15s;line-height:1.6;}
+  .dropzone:hover{border-color:var(--blue);background:var(--soft-blue);}
+  .dropzone.drag{border-color:var(--blue);background:var(--soft-blue);color:var(--blue-d);}
+  .dropzone b{color:var(--ink);} .dropzone u{color:var(--blue);}
+  .mwlist{margin-top:12px;border:1px solid var(--line);border-radius:12px;overflow:hidden;}
+  .mwlist-h{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);padding:9px 12px;background:#fbfcfe;border-bottom:1px solid var(--line2);}
+  .mwlist-h b{font-weight:700;color:var(--ink);}
+  .mwlist-clear{margin-left:auto;font-size:11.5px;border:1px solid var(--line);background:#fff;border-radius:6px;padding:4px 9px;cursor:pointer;color:var(--muted);}
+  .mwlist-clear:hover{background:#f5f6f8;}
+  .mwlist-body{max-height:230px;overflow-y:auto;}
+  .mwitem{display:flex;gap:10px;align-items:baseline;padding:9px 12px;border-bottom:1px solid var(--line2);cursor:pointer;font-size:13px;}
+  .mwitem:last-child{border-bottom:none;} .mwitem:hover{background:var(--soft-blue);}
+  .mwitem .no{font-family:var(--mono);font-size:11px;color:var(--muted);flex:none;min-width:60px;}
+  .mwitem .ti{font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .doc-edit{display:block;width:100%;border:none;border-top:1px solid var(--line2);padding:18px 22px;font-family:var(--sans);font-size:14px;line-height:1.85;color:#1c2737;min-height:320px;resize:vertical;outline:none;background:#fffdf6;}
+  .doc-edit:focus{box-shadow:none;border-top:1px solid var(--amber);}
+  @media print{.topbar,.u-input,.stepper,.memo,#u-actions-wrap,.gate,.err-box{display:none!important;}body{background:#fff;}.result-grid{grid-template-columns:1fr;}.doc{border:none;box-shadow:none;}}
+</style>
+</head>
+<body>
+  <div class="topbar"><div class="topbar-in">
+    <div class="brand"><span class="logo">민</span><div>민원 답변 멀티에이전트<br><small>AI 초안 생성 서비스</small></div></div>
+    <div class="seg">
+      <button id="tab-user" class="active" onclick="App.show('user')">민원 담당자</button>
+      <button id="tab-dev" onclick="App.show('dev')">개발자 설정<span class="cfg-dot" id="cfg-dot"></span></button>
+    </div>
+  </div></div>
+
+  <div class="wrap">
+  <!-- 담당자 -->
+  <div class="screen active" id="screen-user">
+    <div class="eyebrow">민원 답변 초안 생성</div>
+    <h1>민원 내용을 입력하면 답변 초안을 만들어 드립니다</h1>
+    <p class="sub">여러 전문 에이전트가 <b>쟁점 분석 · 근거 검토 · 초안 작성 · 품질 검수</b>를 거쳐 담당자가 바로 활용할 수 있는 초안을 제시합니다.</p>
+    <div class="gate" id="gate"><span>⚙️ 아직 API가 설정되지 않았습니다. 관리자(개발자) 설정에서 키를 먼저 등록해 주세요.</span><button class="btn" onclick="App.show('dev')">설정 화면으로 이동</button></div>
+    <div class="err-box" id="u-err"></div>
+    <div class="u-input">
+      <div class="qrow"><span class="t">민원 내용</span>
+        <span class="pick">
+          <label class="upload-btn" for="filein">📄 엑셀·CSV 업로드</label>
+          <input type="file" id="filein" accept=".xlsx,.xls,.csv" hidden/>
+          <select id="sample" style="width:auto;"></select>
+        </span>
+      </div>
+      <div class="dropzone" id="dropzone"><b>.xlsx</b> 또는 <b>.csv</b> 파일을 여기로 끌어다 놓거나 <u>클릭해 선택</u>하세요<br><span class="hint">열 구성: 제목·본문 (또는 번호·제목·본문). 업로드하면 아래 목록에서 골라 불러옵니다.</span></div>
+      <div class="u-match" id="file-msg"></div>
+      <div class="mwlist" id="mwlist" style="display:none;">
+        <div class="mwlist-h"><b id="mwlist-count">0건</b> 불러옴 · 항목을 클릭하면 입력란에 채워집니다 <button class="mwlist-clear" id="mwlist-clear">목록 비우기</button></div>
+        <div class="mwlist-body" id="mwlist-body"></div>
+      </div>
+      <textarea id="minwon" placeholder="민원 제목과 본문을 붙여넣거나, 위에서 파일을 올려 목록에서 선택하세요.&#10;&#10;예) [제목] ○○○ 문의&#10;안녕하십니까. ..." style="margin-top:12px;"></textarea>
+      <div class="u-match" id="match-hint"></div>
+      <div class="u-actions" id="u-actions-wrap"><button class="btn primary lg" id="run">답변 초안 생성</button><button class="btn" id="clearbtn">지우기</button><span class="right" id="u-time"></span></div>
+    </div>
+    <div class="stepper" id="stepper">
+      <div class="status"><span class="spin" id="spin"></span><span id="status-text">처리를 시작합니다…</span></div>
+      <div class="steps">
+        <div class="step" data-step="1"><div class="k">STEP 1 · 병렬</div><div class="nm">동시 분석 (분류·법령·선례·톤)</div><div class="s">대기</div></div>
+        <div class="step" data-step="2"><div class="k">STEP 2</div><div class="nm">답변 작성</div><div class="s">대기</div></div>
+        <div class="step" data-step="3"><div class="k">STEP 3</div><div class="nm">품질 검수</div><div class="s">대기</div></div>
+      </div>
+    </div>
+    <div class="result-grid" id="result" style="display:none;">
+      <div class="doc">
+        <div class="doc-h"><span class="t" id="doc-title">답변 초안</span><span class="badge" id="qbadge"></span>
+          <span class="tools"><button id="editbtn">편집</button><button id="copyfinal">복사</button><button onclick="window.print()">인쇄</button></span></div>
+        <div class="doc-b" id="final-body"></div>
+        <textarea class="doc-edit" id="final-edit" style="display:none;"></textarea>
+      </div>
+      <div class="memo"><div class="memo-h">📋 처리 메모</div><div class="memo-b" id="memo-body"></div></div>
+    </div>
+  </div>
+
+  <!-- 개발자 -->
+  <div class="screen" id="screen-dev">
+    <div class="eyebrow">개발자 설정 · 에이전트 설계</div>
+    <h1>API · 모델 · 에이전트 구조</h1>
+    <p class="sub">여기서 설정한 키·모델·프롬프트로 담당자 화면이 동작합니다. 실행은 <b>담당자 화면</b>에서 합니다.</p>
+    <div class="panel">
+      <div class="panel-h"><span class="n">API</span> OpenRouter 연결</div>
+      <div class="row">
+        <div><label>OpenRouter API Key</label><input id="apikey" type="password" class="mono" placeholder="sk-or-v1-..." autocomplete="off"/></div>
+        <div class="grid2"><div><label>키 상태</label><input id="keystate" type="text" value="미설정" readonly style="font-weight:700;"/></div><div><label>환율 ₩/$</label><input id="fx" type="number" class="mono" value="1380" min="1"/></div></div>
+      </div>
+      <div class="note">키는 브라우저 메모리에만 보관되며 저장·전송되지 않습니다.</div>
+      <div class="row" style="margin-top:14px;margin-bottom:0;">
+        <div><label>픽셀 오피스 서버 주소 <span class="hint">(npx pixel-agents)</span></label><input id="pixel-url" type="text" class="mono" value="http://127.0.0.1:3100" autocomplete="off"/></div>
+        <div><label>픽셀 오피스 연동</label><label class="hint" style="display:flex;align-items:center;gap:7px;font-weight:600;padding-top:9px;"><input id="pixel-on" type="checkbox" checked style="width:auto;"/> 동작 장면을 픽셀 캐릭터로 시각화</label></div>
+      </div>
+      <div class="note">민원 처리 중 각 에이전트의 동작을 위 서버로 중계해 사무실 캐릭터로 보여줍니다. 서버가 꺼져 있어도 답변 생성에는 영향이 없습니다.</div>
+    </div>
+    <div class="panel">
+      <div class="panel-h"><span class="n">모델</span> 에이전트별 모델 배정 <span class="hint">· 주 모델 + 폴백</span></div>
+      <table class="mtbl"><thead><tr><th>에이전트</th><th class="col-preset">프리셋</th><th class="col-slug">주 모델 슬러그</th><th class="col-price num-r">입력$</th><th class="col-price num-r">출력$</th><th class="col-slug">폴백 슬러그</th></tr></thead><tbody id="modelrows"></tbody></table>
+      <div class="toolbar"><button class="btn" id="preset-cheap">⚡ 최저비용</button><button class="btn" id="preset-balanced">균형(작성·검수 강화)</button><span class="hint">조사·검토는 소형 모델 병렬, 작성은 상위 모델.</span></div>
+      <div class="note"><b>병렬 실행:</b> 조정자·법령·선례·톤 <b>4종이 동시(병렬)로 실행</b>되고, 작성가→검수관만 의존성 때문에 순차입니다. <b>장애 대응:</b> 각 호출은 실패 시 <b>자동 재시도(최대 2회)</b> 후 안 되면 <b>폴백 슬러그로 전환</b>합니다. 병렬 4종은 서로 다른 제공사 모델로 분산해 두면 일시적 과부하(Provider returned error)에 강합니다.</div>
+    </div>
+    <div class="graph">
+      <div class="glabel">에이전트 협업 구조 · <b>분석 에이전트 4종 병렬</b> + 통합 작성 + 검수 루프</div>
+      <div class="tier"><div class="specs4">
+        <div class="agent" id="ag-orch"><div class="top"><div class="ic ic-orch">◆</div><div><div class="nm">조정자/분류</div><div class="rl">분류·핵심질의·소관·민감도</div></div><div class="st">대기</div></div><div class="cost"></div></div>
+        <div class="agent" id="ag-law"><div class="top"><div class="ic ic-law">§</div><div><div class="nm">법령·근거 조사관</div><div class="rl">관련 법령·조항</div></div><div class="st">대기</div></div><div class="cost"></div></div>
+        <div class="agent" id="ag-prec"><div class="top"><div class="ic ic-prec">⊞</div><div><div class="nm">소관·선례 조사관</div><div class="rl">소관·이송·유사사례</div></div><div class="st">대기</div></div><div class="cost"></div></div>
+        <div class="agent" id="ag-tone"><div class="top"><div class="ic ic-tone">♨</div><div><div class="nm">톤·리스크 검토관</div><div class="rl">민원인 감정·표현 위험</div></div><div class="st">대기</div></div><div class="cost"></div></div>
+      </div></div>
+      <div class="conn"><span class="lbl">결과 통합 ↓ (4종 완료 후)</span></div>
+      <div class="tier"><div class="agent wide" id="ag-draft"><div class="top"><div class="ic ic-draft">✎</div><div><div class="nm">답변 작성가</div><div class="rl">Drafter · 통합·공문체 초안</div></div><div class="st">대기</div></div><div class="cost"></div></div></div>
+      <div class="conn"><span class="lbl">초안 검수 ↓</span></div>
+      <div class="tier"><div class="agent wide" id="ag-crit"><div class="top"><div class="ic ic-crit">✓</div><div><div class="nm">품질 검수관</div><div class="rl">Critic · 루브릭 평가·수정지시</div></div><div class="st">대기</div></div><div class="cost"></div></div></div>
+      <div class="loopwrap"><span class="loopbadge" id="loopbadge">↺ 재작성 루프 (검수 미달 시, 최대 2회)</span></div>
+      <div class="meter"><div><span class="lbl">누적 비용 (USD)</span><span class="big" id="m-usd">$0.000000</span></div><div><span class="lbl">원화</span><span class="krw" id="m-krw">₩0</span></div><div><span class="lbl">총 토큰</span><span class="tok" id="m-tok">입력 0 · 출력 0</span></div></div>
+    </div>
+    <div class="panel"><div class="panel-h"><span class="n">프롬프트</span> 에이전트 설계 (수정 가능 · 실행 시 반영)</div><div id="promptrows"></div></div>
+    <div class="panel"><div class="acc-h">최근 실행 · 에이전트별 산출물</div>
+      <details class="scard" data-d="orch"><summary><span class="chip" style="background:var(--ink)">◆</span> 조정자 · 처리계획<span class="meta"></span></summary><div class="scard-b out"></div></details>
+      <details class="scard" data-d="law"><summary><span class="chip" style="background:var(--teal)">§</span> 법령·근거 조사관<span class="meta"></span></summary><div class="scard-b out"></div></details>
+      <details class="scard" data-d="prec"><summary><span class="chip" style="background:var(--purple)">⊞</span> 소관·선례 조사관<span class="meta"></span></summary><div class="scard-b out"></div></details>
+      <details class="scard" data-d="tone"><summary><span class="chip" style="background:var(--amber)">♨</span> 톤·리스크 검토관<span class="meta"></span></summary><div class="scard-b out"></div></details>
+      <details class="scard" data-d="draft"><summary><span class="chip" style="background:var(--blue)">✎</span> 작성가 · 초기 초안<span class="meta"></span></summary><div class="scard-b out"></div></details>
+      <details class="scard" data-d="crit"><summary><span class="chip" style="background:var(--green)">✓</span> 검수관 · 평가/수정<span class="meta"></span></summary><div class="scard-b out"></div></details>
+    </div>
+    <div class="panel hidden" id="summary">
+      <div class="panel-h"><span class="n">비용</span> 호출별 비용 요약</div>
+      <table class="sumtbl"><thead><tr><th>호출</th><th>모델</th><th class="num-r">입력 tok</th><th class="num-r">출력 tok</th><th class="num-r">비용 $</th></tr></thead><tbody id="sumrows"></tbody><tfoot><tr class="total"><td class="lbl">합계</td><td id="s-cnt"></td><td class="num-r" id="s-in"></td><td class="num-r" id="s-out"></td><td class="num-r" id="s-cost"></td></tr></tfoot></table>
+      <div class="note" id="cost-note"></div>
+    </div>
+  </div>
+  </div>
+
+<script type="application/json" id="minwon-data">[{"no": "1xx-xxxx-000001", "title": "간행물(나는 함께 일하고 싶은사람인가_A부처)", "body": "안녕하십니까.\n어느 곳으로 연락을 드려야할지 몰라 민원을 통해 연락드립니다. 번거롭게해드려 죄송합니다.\n\n민원의 제목과 같이 간행물(나는 함께 일하고 싶은사람인가_A부처)를 구매하고 싶은데, 현재 온,오프라인 매장에서 절판이 됐다고 나옵니다.\n따로 구매할 수 있는 방법이 있을까요?\n\n다시한번, 바쁘신데 번거롭게하여 죄송합니다. 답변주시면 감사하겠습니다."}, {"no": "1xx-xxxx-000002", "title": "공무원 자가차량 출장비 지급시 유가기준", "body": "공무원 출장 중 자가차량 이용시 이동거리와 연비, 유가를 계산하여 지급가능하도록 되어있습니다.\n이때 휘발유의 유가를 계산할때 고급휘발유도 가능한가요?"}, {"no": "1xx-xxxx-000003", "title": "사이버국가고시센터 비밀번호를 찾을 수 없습니다.", "body": "이메일을 통한 비밀번호 찾기를 시도했는데 임시 비밀번호가 이메일로 오지 않습니다."}, {"no": "1xx-xxxx-000004", "title": "공무원 임용규칙 개정에 따른 승진소요최저연수 문의", "body": "안녕하십니까? 저는 2005년7월1일부터 2008년6월30일까지 만3년간 장교(대위)로 군복무를 마치고 2020년 12월에 임용된 국가공무원(8급) 재직자입니다.\n\n「공무원 임용령」 제31조제1항에 따라 승진소요최저연수에 산입할 수 있는 기간에 관하여,\n\n공무원임용규칙 개정(‘21.12.7.)이전에는 군복무기간의 경우, 3년을 제외하였으나 개정된 이후에는 전 기간을 산입대상으로 한다고 되어 있고, 당초 임용되어 당해 계급으로 재직 중인 공무원에 대해서도 적용된다고 ’2022년 공무원 인사실무‘에 명시되어 있습니다.\n\n이에 따라, 저의 경우 승진소요최저연수 적용에 대하여 아래와 같이 문의드립니다.\n\n질문1. 현직급(8급) 승진일이 2022년10월7일으로 7급 승진소요최저연수가 약1년 남아 있지만 개정된 임용규칙(2022년 공무원 인사실무)에 따라 군복무기간(3년)을 합산하면 승진소요최저연수(2년)를 채운 것으로 보는지요?\n\n질문2. 만약 질문1에 따라 승진소요최저연수(2년)을 채운 것으로 인정되어, 7급으로 승진이 된다면 8급에서 7급 승진 시 사용된 1년을 차감하고 7급 이후 2년 근무경력을 인정받는 것인지요? \n(예시) 승진소요최저연수를 인정받아 2023년 11월 또는 12월에 7급으로 승진이 된다면, 군복무 3년 중, 1년을 사용하고 남은 2년 근무경력을 인정받아 6급 승진대상자로까지 인정받는지? \n\n상기 질의에 대해 답변을 요청드립니다."}, {"no": "1xx-xxxx-000005", "title": "7급 공무원 응시 관련 한국사 자격 인정 여부", "body": "한국사 능력검정시험 유효기간 폐지에 따라 \n과거 제 한국사검정시험 인증서로 \n현재 7급 공무원 자격요건인 \n한국사능력검정시험 2급으로 \n인정이 가능한지 확인부탁드립니다."}, {"no": "1xx-xxxx-000006", "title": "사무원 육아휴직", "body": "안녕하십니까 인사담당업무를 하고 있는 홍길동입니다.\n\n다름아니라 지금 저희 청에 근무 중인 사무원분께서\n\n18.08.01.~18.08.29. 첫째자녀(29일)\n18.11.28.~19.11.27. 둘째자녀(1년)\n19.11.28.~20.11.27. 둘째자녀(1년)\n20.11.18.~21.10.27. 첫째자녀(11월 10일)\n21.10.28.~23.10.27. 첫째자녀(2년)\n\n이렇게 육아휴직 사용하셨고 23.10.28.부터 24.10.27.까지 둘째자녀에 대한 육아휴직을 사용하시려고 하는데\n이미 첫째자녀에 대한 육아휴직이 3년 9일로 국가공무원법 등에 대한 한 자녀당 3년의 기한이 초과되었음에도\n둘째자녀에 대한 육아휴직 1년을 발령을 내도 될까요...?"}, {"no": "1xx-xxxx-000007", "title": "국가직 7급 공무원 지방인재채용목표제 관련해서 문의드립니다", "body": "안녕하세요 국가직 7급 공무원 채용에 있어 지방인재채요목표제 관련하여 문의드립니다.\n\n7급의 경우 3차에서 당초 합격예정인원의 5% 한도에서 지방인재를 추가합격시키고 동점자가 5%를 초과하면 모두 탈락인 것으로 알고 있습니다.\n\n근데 재작년 7급 일반행정의 경우 당초합격예정인원의 5%가 훌쩍 넘는 27명이 추가합격 되었는데 어떻게 된 것인지 궁금하여 문의드립니다.\n\n수고하세요."}, {"no": "1xx-xxxx-000008", "title": "왜 남의 집에 함부로 들어와서 상수도계량기 교체를 하는거죠?", "body": "2년전일인데 그냥 넘어갈까 생각하다가 이건 아니다 싶어서 민원넣는건데요 가스검침도 집주인에게 연락을 하고 오는판국에 볼일보고 집에 들어가려고 했더니 마당에서 첨보는 사람이 대문을 열고 맘대로 들어와서 먼 작업을 하고 있더라구요 사람이 왔으면 아 지금 머머하고 있는중이다 양해구해달라 등등 애기해야하는거아닌가요 맘대로 들어와놓고 사람이 왔는데도 아무말도 안하고 작업을 계속 하길래 빡처서 머하는거냐고 애기했더니 그제서야 상수도계량기 교체한다고 하던데 사과한마디가 없네요 무상교체고 나발이고 남의 집에 연락도 없이 고지도 없이 함부로 들어와서 아몰랑 무단침입으로 신고할려면 신고해 이런식으로 작업을 시키는건가요?  최소한 집주인에게 문자나 연락을 해야죠 갑자기 남의 집에 들어와서 머 작업하고 있으면 수상하게 생각하는게 당연한거아닌가요 남의 집에 함부로 들어오는건 불법침입입니다. 울산시 상수도본부가 연락도 없이 함부로 들어와서 주인몰래 작업하라고 시켰습니까? 아님 작업자가 맘대로 작업하는겁니까? 이건 머 작업하는 사람이 집주인이고 내가 작업하고 집주인 집에 들어온기분이더군요ㅡ,ㅡ 머 저리 뻔뻔한거죠  집주인이 교체해달라고 울산시에 요구한것도 아니고 기본적인 건 지키면서 작업하라고 울산시가 지시해야하지않나요 작업할거라고 고지도 안하고 공짜로 교체해 주는건데 먼 전화고 문자야 이러면서 직원이나 용역업체들보고 니들맘대로 교체해 이런마인드로 일시키는건가요?   울산시가 주도적으로 추진하는거면 주민들에게 불쾌감을 주면 안돼죠 하나를 보면 열을 안다고 저렇게 고지도없이 연락도 없이 안하무인으로 들어와서 작업하는데 그 작업을 신뢰할수있을까요 요새 택배기사인척하면서 범죄저지르는 사람도 있고 주유소도 주유기 조작해서 사기치는 판국에... 저는 의심부터 들거같네요 상수도 관리자분 집에 아내분이 있는데 첨보는 사람이 맘대로 들어와서 자기 집에서 멀 작업하고 있으면 화나지않을까요? 아내분도 무서워할테구요 무상으로 교체하는 일을 하는거면 칭찬을 받아야지 왜 기본적인것도 안지키면서 되레 욕을 먹는거죠? 이건 울산시장이나 울산시청에서 근무하는 직원들 엿맥이는 짓아닌가요 이럴거면 무상으로 교체한답시고 일벌이지마세요 하나도 안고맙거든요? 그냥 내돈주고 하는게 낫지 ㅡㅡ  구청같은데서도 머 작업하면 플래카드 걸어놓고 몇일부터 작업한다고 고지를 하는구먼 머하는건가요 도대체... 이러면서 울산시청이 일잘한다고 칭찬받길 원하는건가요 이러면서 악성민원인떄문에 힘들다고 피해자코스프레하는건가요 내가하는건 로맨스 남이 하는건 불륜??? 이러니까 악성민원인 기사나와도  악성민원인이라고 생각하지않고 공무원이 일을 제대로 안하는 바람에 빡처서 화내는 주민이라고 밖에 안보이거든요"}, {"no": "1xx-xxxx-000009", "title": "영어 사전 등록 관련 궁금한 사항이 있습니다.", "body": "영어 사전 등록 관련 궁금한 사항이 있습니다.\n\n2021년에 본 토익 점수를 사전 등록한 상태인데,\n\n회사에서 증빙 서류를 요구합니다. \n\n사이버국가고시센터에 등록해 놓은 것을 캡처하는 것은 효력이 없다고 하여,\n\n증빙할 수 있는 자료를 요구하는데, 사이버국가고시센터는 사전 등록을 해도\n\n증빙할 수 있는 서류나, 자료를 제공하지 못하는건가요?\n\n답변 부탁드립니다."}, {"no": "1xx-xxxx-000010", "title": "비현업 공무원의 일시적 현업 변경 조건", "body": "안녕하십니까 저는 국립법무병원에서 근무하고 있습니다 다름이 아니라 비현업으로 근무를 하고 있던 직원이 매월 들어가 있는 정기적인 당직에서 일시적 현업으로 돌려서 근무를 전부 시간외로 받고 있는다는 말을 듣게되어  제상식으로는 이해가 가지 않아서 질의를 남겨봅니다.\n\n비현업 공무원이 정기적인 당직근무를 일시적현업으로 돌려서 시간외를 받을수 있는지와 일시적비현업으로 돌릴수있는 조건을 자세히 알고 싶습니다."}, {"no": "1xx-xxxx-000011", "title": "의원면직 후 재임용 가능 질문", "body": "국가 공무원으로 20년 이상 재직하다가, 2023년 4월에 퇴직하였습니다.\n비위나, 징계 등은 전혀 없고, 개인 사업을 하려고 의원 면직하였습니다.\n\n그러나, 의원 면직후 1년이 지나지 않은 현 시점에 공무원으로 재임용되고 싶습니다.\n기존에 근무했던 행정기관으로 재임용되기 위한 절차나 방법, 조건을 알려주시면 감사하겠습니다."}, {"no": "1xx-xxxx-000012", "title": "공무원수당 등에 관한 규정 제21조(정년퇴직, 명예퇴직, 조기퇴직 또는 자진퇴직하는 공무원 등에 대한 수당등의 지급)", "body": "공무원수당 등에 관한 규정 제21조(정년퇴직, 명예퇴직, 조기퇴직 또는 자진퇴직하는 공무원 등에 대한 수당등의 지급) 1항(공무원이 국가공무원법 제74조제4항, 제74조의2 또는 제74조의3에 따라 퇴직하는 경우에는 퇴직한 날이 속하는 달의 수당등의 전액을 지급한다)과 관련하여 \n공무원수당 등에 관한 규정 제21조에 명시되어 있는 “정년퇴직”, “명예퇴직”, “조기퇴직” 또는 “자진퇴직”에 대한 해석 상 의견이 충돌하여 질의 드림. \n\n질의1)\n - 국가공무원법 제74조의2(명예퇴직 등) 1항에 “공무원으로 20년 이상 근속한 자가 정년 전에 스스로 퇴직하면 예산의 범위에서 명예퇴직수당을 지급할수 있다”라고 명시 되어 있음. \n1항의 내용은 [국가공무원 명예퇴직수당 등 지급 규정]에서 명시되어 있는 “공무원으로 20년이상 근속하고 정년퇴직일전 1년 이상의 기간 중 퇴직”하는 명예퇴직을 의미하는지?\n아니면 [공무원수당 등에 관한 규정] 제21조에서 말하는 자진퇴직을 의미하는지?\n\n질의2)\n - 공무원수당 등에 관한 규정 제21조(정년퇴직, 명예퇴직, 조기퇴직 또는 자진퇴직하는 공무원 등에 대한 수당등의 지급)에서 말하는 “자진퇴진”이란 국가공무원법 제74조의 3(별정직공무원의 자진퇴직에 따른 수당)을 의미하는지?\n\n질의3)\n - 국가공무원법 제74조의2(명예퇴직 등) 2항에서 “직제와 정원의 개폐 도는 예산의 감소 등에 따라 폐직 또는 과원이 되었을 때에 20년 미만 근속한 자가 정년전에 스스로 퇴직하면 예산의 범위에서 수당을 지급할 수 있다”라고 명시 되어 있음.\n 2항의 내용은 국가공무원 명예퇴직수당 등에 관한 규정 제11조에서 명시되어 있는 조기퇴직(경력직 공무원으로 1년이상 20년 미만 근속한 사람으로)을 의미하는지?"}, {"no": "1xx-xxxx-000013", "title": "동반휴직 중 일시귀국에 관련 추가질의 드립니다(기존민원 : 1AA-2309-0865821)", "body": "안녕하세요? 지난번 질의드렸던 내용에 대해 답변해주신 것 중 추가 질의 내용이 있어 다시 질의드립니다.\n기존민원 : 1AA-2309-******\n\n추가 질의 내용입니다.\n1. 답변해주신 내용 중 2항에 국내 체류를 금지한 규정은 없다고 해주셨는데요,\n국내 체류 기간을 30일 이내로 제한하는 법령이나 지침이 있는지 궁금합니다.\n\n2. 일시귀국 및 재휴직 가부에 대한 것은 임용권자의 판단을 받으라고 해주셨는데요,\n만약 기존 승인된 동반휴직 복직 후 다시 동반휴직을 신청하게 된다면 남편의 해외 발령기간과 무관하게 제가 신청 가능한 휴직기간이 2년 이내로 제한되는 것인지 궁금합니다.\n만약 재휴직하는 경우 배우자의 해외근무기관과 무관하게 기간이 2년으로 제한된다면 근거가 무엇인지 궁금하고, 왜 국가공무원법과 다르게 적용되는 것인지 궁금합니다.\n* 남편의 해외 근무 종료일 : '27. 03. 01.\n* (가정) 휴직 재신청 시작일 : '24.03.01. → 남편의 해외 근무 종료일까지 3년이 남은 상황이지만 동반휴직 사유로 재신청하는 경우에는 최대 2년까지만 휴직신청이 가능한 것인지 궁금합니다.\n\n3. 동반휴직의 목적은 해외에 근무하는 배우자를 동반하기 위함이며 배우자와 함께 배우자와 함께 해외에 체류함을 전제로 한다는 것은 잘 이해하고 있습니다.\n다만, 해외근무가 종료되지 않았으나, 배우자가 국내로 30일 이상 '출장'을 가게 되는 경우 제가 배우자와 함께 국내 체류하는 경우에 대한 규정이나 지침이 있는지 궁금합니다.\n3-1 배우자의 해외 근무기간이 종료되지 않았으나 국내 체류기간이 30일이 경과했다는 이유로 기관에서 복직명령을 한다면\n그 복직명령이 법령의 취지와 목적에 맞는 것인지 궁금합니다.\n3-2 복직을 한다면 출장을 마치고 다시 외국으로 돌아가야 할 때 재휴직의 기간은 어떤 법과 규정이 적용되는 것인지 궁금합니다."}, {"no": "1xx-xxxx-000014", "title": "법원공무원교육원 직원의 일반직공무원 해당여부 문의", "body": "법원공무원교육원 소속의 공업서기(전기) 공무원이 의원면직 후, 타기관의 공업서기보로 임용시\n\n법원공무원교육원의 경력이 일반직공무원에 해당하는지 문의를 드립니다.\n\n승진소요최저연수 계산시 일반직공무원으로 보아 퇴직 전 재임용 당시의 계급 이상의 재직기간은 재임용 당시 계급의 재직연수로 통산 할지여부에 대한 문의입니다.  항상 감사합니다."}, {"no": "1xx-xxxx-000015", "title": "사이버국가고시센터 등록 외국어 점수 확인", "body": "안녕하세요. 사이버국가고시센터에 등록된 외국어 점수의 구체적 내용을 알고자 합니다.\n저는 현재 사이버국가고시센터에  TOEIC 어학 성적을 등록하여 두었고 총 점수는 975입니다.\n그런데 구체적으로 듣기 점수와 쓰기 점수가 생각이 나지 않아 조회하고 싶습니다. \n제가 등록한 토익 점수의 듣기 점수와 쓰기 점수를 알 수 있을까요?"}, {"no": "1xx-xxxx-000016", "title": "타 청간 이동에 대해 궁금한게 있어 문의드립니다.", "body": "저는 2020년11월에 충남경찰청 전문경력관 나군(공업;지문감정)으로 채용되었습니다.\n청간 이동에 대해 궁금한게 있어서 문의드립니다.\n\n1. 서울경찰청 소속 일반행정직(지문감정업무)과 충남경찰청 소속 전문경력관 나군(공업;지문감정관)이\n   맞교환 가능한가요?(직군은 다르지만 동일업무 맞교환)\n2. 서울경찰청에서 전문경력관 나군이나 다군을 채용할때 충남경찰청 전문경력관 나군이 서울경찰청으로 ***고 \n   충남경찰청에서 신규채용이 가능한지?\n   방법이 있다면 어떠한 방법이 있을까요?\n3. 전문경력관 나군과 전문경력관 다군이 청간 맞교환이 가능한가요?\n4. 임용시 전문경력관 나군;공업-지문감정으로 채용되었는데, 지문감정업무가 아니어도 공업직과도 맞교환 가능한가요?\n\n5. 전문경력관-공업;지문감정은 타청과 ***는 다른 방법이 있을까요?"}, {"no": "1xx-xxxx-000017", "title": "시간외근무수당 및 관내여비 중복 지급 건", "body": "고등학교에 근무하고 있습니다. \n요즘 내년 학교홍보 및 신입생 유치 기간이다 보니 각종 행사에 학생 인솔 및 교직원의 출장이 빈번해지는 시기입니다.\n주말 예정인 관내 지역행사에 학교 홍보 부스를 설치하여 불특성 다수의 관내 중학생을 대상으로 체험활동을 진행할 계획입니다.\n이 경우 관내여비와 시간외근무의 동일시간대 신청 및 지급을 할 수 있는지요?"}, {"no": "1xx-xxxx-000018", "title": "유연근무 중 출장 후 미복귀 퇴근시 퇴근시간 입력 여부", "body": "유연근무 시차출퇴근 중  출장을 결재를 받고 퇴근 시간까지 외부 출장 후 퇴근하였을때\n\n유연근무 퇴근처리를 출장이 시작하는 시점에 입력하고 출장을 가야하는 것인지 문의합니다."}, {"no": "1xx-xxxx-000019", "title": "계획인사교류자 근무성적평정 문의", "body": "안녕하십니까\n아래 공무원 임용규칙에 따르면 근무성적 평정 및 성과연봉/성과상여금 지급 시 동일 직급에서 인사 교류 전 1년 동안 취득한 평가 등급의 평균보다 한 단계 이상 높은 등급을 부여해야 합니다.\n그런데 승진 직후 바로 인사 교류 대상이 되었으며 현 직급 최초 근무성적 평정 시 직전 직급의 근무성적 평정/성과등급만 있고 '동일직급(현직급)에서 부여 받은 등급이 전혀 없는 경우' 임용 규칙에서는 동일 직급만 지칭하므로 1단계 높은 등급을 미부여해도 되는지 문의합니다.\n\n(예시)\n- 2024년 7월 6급 → '5급'으로 승진 직후 인사교류로 6개월 이상 근무하였음\n- 5급에서 최초 근무성적평정 시 6급에서의 근무성적평정/성과등급만 있고, 5급(동일직급)에서는 교류 전 근무성적평정 및 성과급 등급이 없음\n- *** '전 직급(6급)' 근무성적평정/성과등급보다 높은 등급을 부여해야하는지 문의\n\n(참조조문)\n공무원 임용규칙 제57조의8(계획인사교류자에 대한 근무성적 평정 등) ① 소속 장관은 계획인사교류자에 대하여 「공무원 성과평가 등에 관한 규정」 제7조 또는 제12조에 따른 근무성적평정을 실시할 때에는 본인의 귀책 등 불가피한 사유가 있는 경우를 제외하고는 동일 직급에서 인사교류전 1년 동안 취득한 평가등급의 평균보다 한 단계 이상 높은 등급을 부여하여야 한다. 다만, 최상위 등급이거나 최상위 등급의 바로 하위 등급(예를 들어 평가등급을 \"수ㆍ우ㆍ미ㆍ양ㆍ가\"로 구분할 경우 \"우\" 등급을 의미함)인 경우에는 최상위 등급의 바로 하위등급 이상을 부여하여야 한다. \n  ② 소속 장관은 계획인사교류자에 대하여 「공무원보수규정」 제39조에 따른 성과연봉 또는 「공무원수당 등에 관한 규정」 제7조의2에 따른 성과상여금 지급을 위한 지급등급을 정할 때에는 본인의 귀책 등 불가피한 사유가 있는 경우를 제외하고는 최하위의 등급을 부여할 수 없으며, 동일 직급에서 인사교류전에 부여받았던 지급등급보다 한 단계 이상 높은 등급을 부여하여야 한다. 다만, 최상위 등급이거나 최상위 등급의 바로 하위 등급(예를 들어 지급 등급을 \"SㆍAㆍBㆍC\"로 구분할 경우 \"A\" 등급을 의미함)인 경우에는 최상위 등급의 바로 하위등급 이상을 부여하여야 한다. \n  ③ 소속 장관은 계획인사교류자에 대하여 「공무원 성과평가 등에 관한 규정」 제27조에 따른 가점을 부여할 수 있으며, 가점을 부여하기 위한 기준과 규모는 소속 장관이 자율적으로 정한다. \n  ④ 소속 장관은 계획인사교류자 부서의 장(과장급 또는 이에 준하는 보조ㆍ보좌기관)에 대하여「공무원 성과평가 등에 관한 규정」제7조에 따른 성과계약 등 평가와 「공무원보수규정」제39조에 따른 성과연봉의 지급등급을 우대하여 부여할 수 있다."}, {"no": "1xx-xxxx-000020", "title": "'김행 여성가족부 장관 후보자' 에 대한 임명은 국민을 모독하는 것입니다.", "body": "이번에 임명된 김행 여성가족부 장관 후보자에 대하여 자세히 알지 못하는 입장에서 의견을 피력한다는 것이 쉽지 않다는 점을 \n잘 알고 있습니다. \n당연히 언론 보도 사항을 통해서 알 수 있지만 그마저도 하도 말들이 많아서 자세히 보지는 못했습니다. \n사실 장관 후보자들에게 청문회를 거친다는 것은 거의 3D 업종에 뛰어든다고 할 정도로 가혹하다는 점에 충분히 동감합니다. \n역시 김행 후보자도 그 과정을 거치면서 본인과 가족들까지 엄청 힘이 들었을 것이라고 봅니다. \n그런데 놀라운 점은 김행 후보자가 인사청문회 과정 가운데 양해를 구하지 않고 나가서 심지어 소재 파악도 어렵다는 보도를 접했습니다. \n그것은 마치 국가기관, 공공기관은 말할 것도 없고 일반 사기업, 심지어는 알바를 뽑는 자리라도 일종의 면접을 보는데 느닷없이 나가 버린다면 어느 곳에서 그 사람을 채용해서 쓸 수 있을까요? \n인사청문회라고 그럴 듯한 표현일 뿐이지 사실은 장관후보자에 대한 국민 면접 아닌가요? \n그런데 줄행랑이라..... 언론 보도로 보면 그런 사례가 최초라고 합니다. 사실 있을 수 없는 일이지요. \n그런 사람을 선진화로 향하는 우리 대한민국 장관으로 임명한다면 세계적 코메디 아닌가요. \n그리고 그 부처 공무원들이 그런 사람이 장관이 된다면 아마도 속내로 욕을 바가지로 할 것입니다. \n거기에서 그치는 것이 아니라 임명권자인 대통령님에 대한 인식도 엄청 커서 손상이 이만저만 아닐 것입니다. 대통령님께서 국정 운영을 하시는데도 적지 않은 부담이 될 것이라고 봅니다. \n오늘 얼핏 보도를 보니 여권 국민의힘 원내대표가 김행 후보자와 야권 대표의 어떤 경우와 비교를 해서 옹호하는 듯한 뉴스 제목을 보았습니다. 자세한 사항을 모르지만 아마도 그런 식은 정치적 접근일 것입니다. 그리고 그 원내대표가 비교적 합리적인 분으로 알고 있는데 조금은 의외라는 인상을 받았습니다. 하여튼 정치권 이야기는 우리 공직 사회의 일반 기준과 다른 점이 있으니 동일 비교는 조금은 무리가 있을 것입니다. \n이번 장관 후보자의 줄행랑을 보면서 과연 그분이 기본적인 공직 의식의 소유자인지 심각하게 의문이 들었습니다. \n그분 후보자 임명 일성이 다 망해가는 부처 수장이란 점을 고려하더라도 그렇게 면접 중간에 나가버리는 행위는 조금도 동의하기 어렵습니다. 정치적 임명이라고 하여 방관하지 말고 다소 시간이 걸리더라도 다른 분을 임명토록 하기를 바랍니다. \n더불어서 한마디 드리면 여성가족부 장관이라고 하여 반드시 여성만 해야 하는 법적 규정이 있지 않는 한 남성 가운데도 여성들 보다도 더 열린 마음의 소유자도 많을 것이기에 유능한 남성 가운데도 장관 후보자로 해 보는 것이 어떨까 합니다. \n\n저의 이번 글은 제 개인적 민원 사항은 당연히 아닙니다. 그저 국민 가운데 이런 목소리도 있다는 점을 참고해 주셨으면 합니다."}, {"no": "1xx-xxxx-000021", "title": "임신 중 조기진통 진단시 병가 사용 가능 여부 문의합니다.", "body": "안녕하세요\n저는 현재 공무원 재직중이며, 임신부로 출산 예정일은 23.12.13입니다.\n\n병원 진료후\n병명 : 분만이 없는 조기진통, 임신 22주 이상, 34주 미만 [질병코드 060.01]\n소견 : 상기 환자는 상기 병명으로 출산때까지 안정 가료를 필요로 함.\n\n이라는 진단서를 발급 받고, 산책도 하지 말라는 의사 소견을 들었습니다.\n(조기진통은 보건소의 19대 고위험 임신질환에 해당합니다) \n\n \n병가 상신에 관해 문의하니 복무 부서에서는 공무원 복무`징계에 관한 예규에 '임신 중 심한 입덧이나 부작용 등으로 안정의 필요가 있는 경우' 일반 병가를 승인할 수 있다고만 기재되어 있을 뿐 [부작용 등]에 [조기진통]이 해당하는지는 판단해줄 수 없다고 합니다.\n\n라. 특별휴가\n  (2) 출산휴가\n    (마) 출산 및 유산,사산 휴가는 산모의 건강을 고려하여 일정기간 휴가를 부여하는 것이며, 아래의 경우에는 일반병가를 승인\n      - 임신 중 심한 입덧이나 부작용 등으로 안정의 필요가 있는경우 일반 병가를 승인\n\n\n일반적인 조산우려의 경우 일반 병가가 아니라 44일의 범위 내에서 출산휴가를 사용해야 한다고 하는데, \n저의 경우 출산 예정일로부터도 44일이 초과됩니다.\n \n개인적인 생각으로는 질병코드가 있으니 일반병가 상신이 가능한 것이 아닌가 싶은데\n이런 경우, 결재권자가 승인한다면 병가 사용이 가능한가요 \n연간 60일 범위 내에서 전체 병가 사용이 곤란하다면, 해당 진단서로 병가 사용 후 출산예정일 44일 전부터 출산휴가로 전환은 가능한가요?"}, {"no": "1xx-xxxx-000022", "title": "교육출장여비 관련", "body": "안녕하세요, 울산지방해양수산청에서 지출담당을 맡고 있는 권진성이라고 합니다.\n[교육훈련여비지급기준]에서 '합숙또는기숙사이용이가능한경우'에서 식비는 '당해 교육훈련기관이 청구하는 금액 또는 구내식당 가격'에 대해서 문의드리고자 합니다.\n예를 들어, 2박 3일 교육인데 '합숙또는기숙사이용이가능한경우'이지만, 비합숙으로 교육을 신청하였습니다.\n합숙또는기숙사이용을 하였다면 식비영수증을 35,000원(7식)으로 받을수있으나,\n비합숙으로 신청하였기 때문에 식비영수증을 15,000원(3식)짜리를 받아왔습니다.\n이 때, 2박 3일 9식의 식비에 대해서 \n1. 영수증(3식) + 식비규정(6식)\n2. 영수증(3식) + 식비규정(2식, 식사가 제공되지 않는 첫날 아침, 마지막날 저녁)\n어떻게 지급하는게 맞는걸까요?\n\n이해가 안되는 부분이 있다면 052-228-5542 or 010-9554-**** 로 연락주세요"}, {"no": "1xx-xxxx-000023", "title": "공무원 관외 출장 여비 지급 관련 문의드립니다.", "body": "공무원 관외 출장시 여비 지급 관련 문의드립니다.\n세부산정내역을 보고, 답변 꼭 부탁드립니다. 일비 지급이 이상한 것 같아서 문의드립니다.\n\n일비 지급 기준을 알고싶습니다.\n1) 25000*0.5는 무슨기준으로 0.5를 곱하나요?\n2) 일비는 공무원 여비규정 제16조 1항에따라 날마다 쓰는 비용이라 해석되며, 공무 수행을 위해 그날 하루 쓰는 돈이라고 알고있는데, 기숙사에 있는 동안은 지급을 안한 것이 이상합니다. 소속 행정기관마다 상이하게 해석을 하나요? 기관의 여비 지급 담당자의 자의적으로 해석하여 일비를 일괄 지급할 수 있나요?\n\n\n상황 : \n\n관외 출장으로 국가소재 국립 대학교에서 연수가 있어 2주에 걸쳐있어 평일 4+5일하여 총 9일간의 연수를 들었습니다.\n기숙사는 주말에 거주는 가능하나, 식사를 제공하지 않았습니다.\n연수시간은 연수일 모두 4시간 이상입니다.(1주차 금요일 4시간, 2주차 금요일 4시간, 나머지 7일-8시간) \n\n교통비 : 6만원(15000원*4)\n세부 산정내역\n1주차 기숙사 가는비용, 1주차 집으로 오는비용\n2주차 기숙사 가는비용, 2주차 집으로 오는비용\n\n식비: 5만원(25000원*2)\n세부 산정내역\n연수 시작일 전날 식비(기숙사 입주가 월요일까지 였음. 식사제공x)\n연수 끝난날 식비\n\n숙비: x\n세부 산정내역\n기숙사 입실\n\n일비: 25000원\n기숙사 입주일 : 25000*0.5=12500원\n기숙사 퇴교일 : 25000*0.5=12500원"}, {"no": "1xx-xxxx-000024", "title": "당직휴무 관련 문의", "body": "1. 문의사항 : 당직근무 종료시각이 속하는 날이 토요일 또는 공휴일인 경우에 해당하는 경우, 당직휴무(8시간) 분할 사용 가능 여부\n\n예를 들어 2023.10.7.(토) 숙직 시 근무 종료일이 공휴일이기 때문에 정상근무일부터 토요일 또는 공휴일을 제외하고 10일째 되는 날 까지 사용할 수 있는데, 2023.10.10.(화) 오전 당직휴무(4시간), 2023.10.13.(금) 오후 당직후뮤(4시간) 사용이 가능한지\n\n2. 관련 규정 : 국가공무원 복무징계 관련 예규(2023.1.) 제5장 2. 당직 실시지침 나.당직운영방법 (5) 당직근무자의 당직휴무\n\n(5) 당직근무자의 당직휴무\n    ○ 각급 기관의 장은 업무상 불가피한 경우를 제외하고는 당직근무자(재택당직근무자 제외)에 대하여 그 근무종료시각이 속하는 날의 일정 시간(전부 휴무를 포함함)을 정하여 휴무하게 하여야 함\n    ○ 당직근무 종료시각이 속하는 날이 토요일 또는 공휴일인 경우 그 다음 정상근무일부터 토요일 또는 공휴일을 제외하고 10일째 되는 날까지의 기간 중 1일의 일정 시간(전부 휴무를 포함함)을 정하여 휴무하게 하여아 함\n       ※ 당직근무종료시각이 속하는 날이 정상근무일인 경우에는 종료일에만 당직 휴무를 사용할 수 있음을 유의"}, {"no": "1xx-xxxx-000025", "title": "공무원 피의사건 처리 문의", "body": "00부 지방조직 인사담당자 입니다.\n공무원 범죄사건에 대한 수사 개시 및 결과 통보를 받았습니다.\n상부 기관에 보고하였고, 상부기관에서 관련 규정에 의해 처리하라는 애매한 지시를 받았습니다.\n사건 자체가 애매해서 명확한 가이드를 주지 못하는 듯합니다.\n상급기관도 가이드를 못 주는데 A부처에 질의하는 점, 황당하고 죄송하게 생각합니다.\n\n사건개요는 아래와 같습니다.\n저희 직원이 대형 마트에서 다량의 물건을 구매하였고, 마트의 계산원이 바코드를 찍는 과정에서 누락한 물건이 있었던 모양입니다.\n계산원도 저희 직원도 이 사실을 모른체 계산원이 제시한 금액만을 계산하고 자리를 이탈하였고, 몇 일 뒤 누락한 물건이 있다는 사실을 안 마트 측에서 경찰에 신고하면서 피의자 신분으로 조사를 받았습니다.\n마트 측에서는 손해 금액을 변상 받고자 신고하였지만 경찰은 접수된 사건이기에 절차대로 수사를 하고 저희에게 통보를 하였습니다.\n죄명은 피해자신고에 의한 절도입니다.\n이 후 CCTV를 확인한 경찰이 고의성이 없다고 판단, \"혐의를 인정할 수 없기에 불송치 결정 후 사건을 종결하였습니다.\"라는 처리 결과를 통보해 왔습니다.\n상호 착오에 의한 사건으로 피해자는 손해 금액을 변상 받으면서 끝났지만 공무원 신분인 직원은 징계절차가 남아있게 되었습니다..\n정황상 고의성도 없고 경찰도 혐의없음 처리가 되었음에도 주의나 경고라도 해야 하나요 아니면 무조치 종결 처리해야 하나요?\n이유야 어찌 되었던 공무원으로서 품위유지에 실패한 것 아니냐는 의견과 공무원이라는 이유 때문에 무조건 '을' 이어야 하는가? 하는 의견이 공존합니다.\n이런 류의 질의를 남기면 '기관 사정에 맞게 적이 처리하세요' 라는 답변을 주시는 경우가 많은데 명확하게 가이드를 주시면 감사하겠습니다.\nA부처의 인사감사를 받아야 하는 입장에서 A부처 담당자님의 의견이 일 처리 지침이 될 수 밖에 없습니다."}, {"no": "1xx-xxxx-000026", "title": "공무원 재해신청을 했는데요.아직도 답변이 없어서요", "body": "제주시청 근무중 무릎 연골 파열이 되서 수술후 공무상 재해신청을 \n했는데요. 몇달째 결과나 답변이 없어서요.수술후 후유증으로 휴직상태인데요.\n걷는데 너무 불편하고 통증이 심해서 밤새 잠도 못자고 하루하루 통증에 시달려서 진통제로 의지하는데 걷거나 계단 오르락내리락 힘들고 뛰는거는 아예 꿈도 못꾸는 상태에 다리 장애가 생겨서 늦은 나이에 결혼 생각했는데 꿈도 사라지고 너무 힘든나날을 보내고 있는데요. 이번달 복직예정인데 다리 장애로 청원경찰 업무 하는데 너무 힘들듯 해서 재해신청 결과 나오는거 보고 퇴직을 한후 변호사 대행해서 장애신청을 할려는데요 6월달 신청한게 아직도 결과가 안나와서 답답한 마음에 문의합니다."}, {"no": "1xx-xxxx-000027", "title": "호봉 착오로 인한 급여과다지급 환수 소멸시효", "body": "첫 호봉획정시 담당 장학사의 착오로 1.5호봉 높게 책정되어 10년 넘게 과다지급 되었습니다.\n2023년 10월 호봉 정정으로 인하여 해당교육청에서 전기간 과다지급한 27,552,400원 전액을 모두 환수한다고 합니다.\n이 금액은 2012년 3월부터 2023년 9월까지 과다지급분 전액입니다.\n\n과다지급된 보수를 반환받을 권리는 국가개정법 제96조에 따라 소멸시효가 5년이라는 기존 판결에 따라 전액을 환수하는 것은 위법하다고 판단되어 문의 드립니다. 또한, 그동안 과다책정된 급여에 따른 소득세, 건강보험료, 연말정산, 기여금 등 이미 납부한 과오분도 5년 소멸시효를 적용하므로 제가 환급받을 수 있는 최대금액도 5년의 금액입니다.\n\n관련 자료 첨부드리며 합당한 해결 및 답변 부탁드립니다."}, {"no": "1xx-xxxx-000028", "title": "2020년도 국가공무원 5급(기술) 공개경쟁채용 제2차시험 문제지 부재", "body": "안녕하세요.\n\n사이버 국가고시센터의 시험문제/정답 - 서술형문제 페이지에 \n4번 게시물 '2020년도 국가공무원 5급(기술) 공개경쟁채용 제2차시험 문제지' 중 \n전산직(전산개발) 직렬의 선택과목 중 '정보보호론' 과목의 문제지가 부재하여 열람을 요청코자 문의드립니다.\n\n감사합니다."}, {"no": "1xx-xxxx-000029", "title": "김행 여가부장관 후보자 지명철회 촉구", "body": "김행 여성가족부 장관 후보자는 일반국민이 공감하기 어려운 여러가지 문제가 있는 바 *** 정부의 성공을 위하고 국민을 위해서 장관후보자로서 자질이 부족한 김행 후보자 지명을 반드시 철회해주실 것을 간곡히 청원합니다"}, {"no": "1xx-xxxx-000030", "title": "안녕하세요? 토익 성적 인정 유효기간 5년 관련하여 문의드립니다.", "body": "안녕하세요!\n사이버국가고시센터에 2020년 5월에 토익 900점을 받은 성적을 등록했으나 2년 만료로 알고 2022년 7월에 다시 취득한 825점 성적을 재등록하였습니다. 유효기간이 5년 인정으로 변경되어서 2020년에 900점을 취득한 성적으로 등록하고 싶습니다. 토익 성적표도 있습니다. 혹시 가능할까요?\n감사합니다."}, {"no": "1xx-xxxx-000031", "title": "공무원 초과근무 수당 산정 질의", "body": "안녕하세요\n\n군산교도소 급여 담당 교사 김호근입니다.\n\n저희 기관 야근부 직원의 초과근무 산정 관련 문의입니다.\n\n야근부는 본인의 총 근무시간에서 월 기준복무 시간을 뺀 나머지를 초과근무로 받고 있습니다.\n\n그리고 연가를 사용하게 되면 본인의 연가 1개가 소진되고 월 기준복무시간에서 8시간을 차감하는데요.\n\n첨부 파일 내용처럼 개인사정으로 연가를 많이 써서 월 기준복무시간이 -가 되는 상황이 생겼습니다.\n\n이때 10월 총 초과근무 수당이 25시간이 맞는지 57시간이 맞는지 궁금합니다.\n\n바쁘시겠지만 검토 부탁드립니다.\n\n감사합니다."}, {"no": "1xx-xxxx-000032", "title": "출장여비 및 교육비 등의 지급 가능여부", "body": "수고하십니다. 저는 국토교통부 소속기관에서 근무하고 있습니다.\n우리 기관에서는 국도의 유지보수업무를 수행하고 있으며 이를 위해 소속 직원(공업(운전)직, 운전직, 기계운영직)들이 업무의 필요에 의해 자동차를 운전하기도 하고 건설기계를 조종하기도 하면서 근무하고 있습니다.\n\n건설기계관리법 29조, 도로교통법 87조에 의하면 건설기계조종사와 운전면허를 받은 사람은 정기적인 적성검사를 받아야 하고 또한 건설기계관리법 31조에서는 건설기계조종사는 안전 및 전문성 향상을 위한 교육(안전교육 등)을 받아야 한다라고 되어 있습니다.\n\n질의 하고 싶은 내용은 소속 공무원이 적성검사나 안전교육 등을 받으러 갈 때 출장여비와 교육비 등의 소요비용을 기관 예산으로 지급이 가능한지 아니면 개인 연가를 사용하거나 개인 돈으로 비용을 부담해야 하는지에 대해 문의 드립니다."}, {"no": "1xx-xxxx-000033", "title": "질병휴직 중에 결혼할 시 해외로 신혼여행가능?", "body": "공무상 질병휴직 기간중에 결혼을 하게 됐습니다. 질병휴직 기간중에 해외여행은 안된다고 알고 있는데 휴직 기간중에 결혼을 해서 신혼여행으로 해외를 가는 거 가능한가요?"}, {"no": "1xx-xxxx-000034", "title": "공무국외출장 여비 중 항공권을 사비로 결제한 경우 마일리지 신고 여부", "body": "안녕하세요.\n공무원이 공무국외출장을 다녀오는데 있어서 항공권을 본인 자비로 부담하여 출장을 다녀온 경우\n이 경우에도 공적 마일리지 신고를 해야 하는지 문의드립니다.\n감사합니다."}, {"no": "1xx-xxxx-000035", "title": "국가공무원 위탁교육 중 휴직 및 전보 등에 관한 문의", "body": "안녕하세요.\n\n1. 국가공무원이 국내대학(원) 학위과정 위탁교육 기간 동안 연수휴직 사유로 휴직이 가능한지에 대해 문의드립니다.\n  1-1. 연수휴직 사유가 불가 할 경우, 질병 등 기타 사유로의 휴직은 가능한지 문의드립니다.\n\n2. 국가공무원 국내대학(원) 학위과정 위탁교육 기간 동안 타지역 전보 등에 있어, 제한할 수 있다는 내용 등의 규정사항이나 인혁처가 내린 권고지침 등이 있는지 문의드립니다."}, {"no": "1xx-xxxx-000036", "title": "군경력 대우 및 근속승진기간 단축관련 궁금합니다.", "body": "저는 군부사관으로 2003년3월에 임관되어 2007년3월에 만기 전역 후 2014년 국가공무원으로 재임용 되었습니다. 이에 대우 및 근속승진단축에 해당이 궁금합니다. 답변 부탁드립니다."}, {"no": "1xx-xxxx-000037", "title": "궁금합니다", "body": "A부처의 무궁한 발전을 기원합니다. \n\n귀 처가 실시 중인 [2023년 찾아가는 공직박람회]와 관련, 전 국민을 대상으로 동 정책을 잘 나타낼 수 있는 ‘슬로건 제안 공모’를 실시(인스타그램)한 바 있습니다.\n\n   *공모자격 : 누구나 응모가능(1인 3작 가능)\n   *공모기간 : 2023.09.05.(화)~09.15(금), 18:00까지\n   *공모주제 : ‘2023년 찾아가는 공직박람회’를 잘 나타낼 수 있는 슬로건\n   *접수방법 : A부처 또는 박람회(@psf_tour)\n     - 인스타그램 팔로우> 프로필 링크 클릭> 구글폼 작성> 제출> ‘참여완료’ 댓글 작성\n   *결과발표 : 2023년 09월 20일(수), 인스타그램을 통한 발표\n   *시    상 : 내용 생략\n\n이렇게 진행하겠다고 해 놓고, A부처장께서는 박람회 일정을 소화하고 계신 것이 언론 보도되고 있지만, 대국민 약속(결과발표)에 대하여는 약속한 날자보다 보름이 지났건만 현재까지 오리무중입니다.\n\n적극행정의 주무 부처 답지 않은 이 같은 소극행정은 마땅히 사라져야 할 업무해태(복지부동)가 아닌가 생각하며 [국민이 궁금해 하고, 귀 처가 약속한 사항에 대한 빠른 이행]을 촉구드립니다."}, {"no": "1xx-xxxx-000038", "title": "명예퇴직 시 상위 직급 승진 소요 연수가 궁금합니다.", "body": "일반직공무뭔이  6급으로 승진한  후\n명예퇴직을 할 경우  명예상위직급 승진 최저 년수가\n궁긒합니다.\n\n예를 들면  23.1.1.부로 6급으로\n승진한 경우  얼마의  기간이 지나야\n되는지 궁금합니다."}, {"no": "1xx-xxxx-000039", "title": "정근수당 소급지급 등", "body": "안녕하세요 고생이 많으십니다.\n\n우리기관소속 직원 중  2018.11.5.부로 초임호봉 확정시 *** 경력에 대하여 타기관 근무연수 3년을 인정하지 않아 근무연수가 정정되어  근무연수 미인정으로 인한 정근수당, 정근수당가산금, 대우공무원수당 소급 신청을 하였습니다. (호봉인정은 이상없음)\n\n\n1. 소급시효기간 없이 초임호봉 산정 2018.11.5.부터 소급하여 수당을 지급하면 되나요? 수당 소급시효기간을 3년으로 봐야하나요?  \n2. 소급시효기간이 3년으로 본다면,  소급기일을 소급신청 소급공문발송날짜 23.9.25.  / 소급공문접수날짜 23.9.26.  / 어느 날짜 기준으로  소급해야 하나요? \n3. 위 2번이 아니라면 소급신청한 9월로 보고 3년소급으로 2020.10.~2023.9. 까지 소급하면 되나요? \n4. 위 2번, 3번 이 아니라면 소급 기간을 어떻게 해야 하나요?\n\n빠른 답변 부탁드립니다.~!!\n항상 감사합니다~!!"}, {"no": "1xx-xxxx-000040", "title": "을지훈련에 따른 비상소집 응소시 초과근무수당 지급여부", "body": "안녕하세요. \n늘 노고가 많으십니다. \n\n현업공무원의 비상근무(을지훈련) 관련하여 초과근무시간 인정여부에 대해 문의 드리고자 합니다. \n\n지난 8월 21일~26일 16시까지 을지훈련을 진행 하였습니다. \n\n공무원보수 등의 업무지침에 따라 \"현업 근무자의 경우 을지훈련에 다른 비상근무자는 초과근무수당을 지급 할 수 없다\"라고 규정에서 확인 하였습니다. \n\n그래서 비상근무자가 9시~익일9시까지 근무인 경우 초과근무시간 산정 방법에 따라 전체 시간을 초과근무로 보기 때문에 이날은 비현업근무자처럼 9-18시까지 기본근무 한것으로 인정하고 초과근무는 인정 드리지 않았습니다. \n*비상근무시간: 9시-익일 9시 비상근무 상황실에서 근무\n\n그런데 현업근무자들의 이야기는\n\n을지훈련 비상근무자에게 초과근무수당을 지급할 수 없다는 것은 인지하나,\n현업근무자의 비상근무는 전체시간을 초과근무로 본다는 건데 과연 타당한지 의문이 든다고 문의가 왔습니다. \n현업근무자의 비상근무시간도 8시간의 정규근무와 그 외의 초과근무로 봐서 비상근무기간에 별도의 초과근무가 발생하지 않도록 하는 것이 타당하지 않느냐고 문의 하는데요.\n\n결론은 9-18시까지는 초과근무시간으로 인정을 해주는 것이 타당하지 않느냐는 문의인데\n저희가 대체휴무를 드리므로 전일근무일 (9-18시, 8시간)+대체휴무일 (9-18시, 8시간) 총 16시간을 기타시간으로 인정 돼야 맞다는 의견 이십니다. \n\n이에 대해 현업근무자 중 을지연습 기간에 비상근무 한 분들에 대한 초과근무 인정(9-18시까지, 비현업 정규근무시간 8시간)이 가능한지 여부를 문의 드립니다. \n\n감사합니다."}]</script>
+<script>
+const App=(function(){
+  "use strict";
+  const SAMPLES=JSON.parse(document.getElementById('minwon-data').textContent);
+  const OR_URL="https://openrouter.ai/api/v1/chat/completions";
+  const $=s=>document.querySelector(s),$$=s=>document.querySelectorAll(s);
+  const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+  // ===== 픽셀 오피스 연동 (Pixel Agents) =====
+  // 각 에이전트의 동작을 픽셀에이전트 서버(npx pixel-agents)로 중계해 사무실 캐릭터로 시각화.
+  // 픽셀 서버가 꺼져 있어도 민원 처리에는 전혀 영향 없음(전송 실패는 조용히 무시).
+  const PIXEL={
+    // 역할별 캐릭터 표시: tool=애니메이션 종류(Read=읽기, Write/Edit=타이핑), status=캐릭터 위 라벨
+    map:{
+      orch:{tool:"Read", status:"쟁점·소관 분석 중"},
+      law: {tool:"Read", status:"법령·근거 조사 중"},
+      prec:{tool:"Read", status:"소관·선례 검토 중"},
+      tone:{tool:"Read", status:"민원인 톤 분석 중"},
+      draft:{tool:"Write",status:"답변 초안 작성 중"},
+      crit:{tool:"Edit", status:"품질 검수 중"}
+    }
+  };
+  const ROLE_NAME=k=>{const r=ROLES.find(x=>x.key===k);return r?r.label:k;};
+  function pixelOn(){return $('#pixel-on')&&$('#pixel-on').checked;}
+  function pixelBase(){return (($('#pixel-url')&&$('#pixel-url').value.trim())||"http://127.0.0.1:3100").replace(/\/+$/,"");}
+  async function emitPixel(roleKey,hookEvent){
+    if(!pixelOn())return;
+    const m=PIXEL.map[roleKey];if(!m)return;
+    const body={session_id:"minwon-"+roleKey,hook_event_name:hookEvent};
+    if(hookEvent==="SessionStart")body.cwd=ROLE_NAME(roleKey);
+    if(hookEvent==="PreToolUse"){body.tool_name=m.tool;body.tool_input={status:m.status};}
+    try{await fetch(pixelBase()+"/api/hooks/minwon",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});}
+    catch(_){/* 픽셀 오피스는 선택적 — 실패해도 민원 처리는 계속 */}
+  }
+  // 6개 캐릭터를 사무실에 등장시킴(SessionStart는 PreToolUse보다 먼저 도착해야 하므로 순차 await)
+  async function pixelStartAll(){if(!pixelOn())return;for(const k of Object.keys(PIXEL.map))await emitPixel(k,"SessionStart");}
+
+  const PRICES={"nvidia/nemotron-3-super-120b-a12b":[0.10,0.50],"google/gemma-4-31b-it":[0.12,0.36],"microsoft/phi-4":[0.068,0.138],"meta-llama/llama-4-maverick":[0.15,0.60],"mistralai/mistral-small-3.2-24b-instruct":[0.075,0.20],"qwen/qwen3.5-plus-02-15":[0.26,1.56],"google/gemini-2.5-flash":[0.30,2.50]};
+  const PRESET_LIST=Object.keys(PRICES);
+  // ③ tone 기본 모델을 gemini-2.5-flash로 분산(병렬 시 phi-4 중복 방지) · 각 역할에 폴백 지정
+  const ROLES=[
+    {key:"orch",label:"조정자",cheap:"microsoft/phi-4",bal:"google/gemma-4-31b-it",fallback:"mistralai/mistral-small-3.2-24b-instruct",mt:700,temp:0.2},
+    {key:"law",label:"법령·근거 조사관",cheap:"mistralai/mistral-small-3.2-24b-instruct",bal:"nvidia/nemotron-3-super-120b-a12b",fallback:"google/gemini-2.5-flash",mt:900,temp:0.2},
+    {key:"prec",label:"소관·선례 조사관",cheap:"microsoft/phi-4",bal:"google/gemma-4-31b-it",fallback:"mistralai/mistral-small-3.2-24b-instruct",mt:700,temp:0.2},
+    {key:"tone",label:"톤·리스크 검토관",cheap:"google/gemini-2.5-flash",bal:"mistralai/mistral-small-3.2-24b-instruct",fallback:"mistralai/mistral-small-3.2-24b-instruct",mt:600,temp:0.3},
+    {key:"draft",label:"답변 작성가",cheap:"meta-llama/llama-4-maverick",bal:"qwen/qwen3.5-plus-02-15",fallback:"google/gemini-2.5-flash",mt:1600,temp:0.4},
+    {key:"crit",label:"품질 검수관",cheap:"mistralai/mistral-small-3.2-24b-instruct",bal:"meta-llama/llama-4-maverick",fallback:"google/gemini-2.5-flash",mt:1600,temp:0.2}
+  ];
+  const SYS={
+    orch:`당신은 정부 민원 처리 총괄 조정자(Orchestrator)입니다. 민원을 읽고 처리계획을 세워 전문가들에게 작업을 분배합니다.
+아래 JSON만 출력하세요. 설명·코드블록 금지.
+{"핵심질의":["질의를 항목별로 분해"],"유형":"(법령해석|단순안내|시스템·계정|제도문의|불만·항의|기타)","난이도":"(상|중|하)","소관판단":"(자체회신 가능|타기관 이송 권고|소관확인 필요)","민감도":"(일반|항의·불만|악성·반복 우려)","지시":{"법령조사관":"집중해 찾을 근거·조문 방향","선례조사관":"확인할 소관·유사사례 포인트","톤리스크검토관":"톤·표현에서 주의할 점"}}`,
+    law:`당신은 민원 답변 근거를 조사하는 법령·제도 전문가입니다. 답변에 필요한 관련 법령·시행령·지침·제도 근거를 제시하고 핵심 조항 요지를 요약합니다.
+조문 번호·내용이 불확실하면 확실성을 "추정"으로 정직하게 표기하세요. 아래 JSON만 출력하세요.
+{"관련근거":[{"명칭":"법령/지침명","조항":"제O조","요지":"핵심 내용","확실성":"(확실|추정)"}],"답변방향":"근거 기반 결론 방향","불확실사항":["담당자가 원문 확인이 필요한 부분"]}`,
+    prec:`당신은 소관·선례 조사관입니다. 민원의 소관 부서를 추정하고 타기관 이송 필요 여부를 판단하며, 제공된 유사 선례를 참고해 처리 시사점을 제시합니다.
+아래 JSON만 출력하세요.
+{"소관부서_추정":"","이송필요":"(불필요|이송권고|판단필요)","유사선례_시사점":"제공된 선례에서 참고할 점(없으면 '해당없음')","처리시_안내문구":["답변에 포함하면 좋을 안내"]}`,
+    tone:`당신은 민원인 응대 톤·리스크 검토관입니다. 민원인의 감정 상태와 답변 시 표현 리스크를 평가합니다.
+아래 JSON만 출력하세요.
+{"민원인_상태":"(차분|불안·답답|불만·항의|분노·공격적)","권장_톤":"답변에 쓸 어조 가이드","사과·공감_필요":"(예|아니오)","표현_리스크":["피해야 할 표현/태도"],"권고사항":["응대 권고"]}`,
+    draft:`당신은 베테랑 민원 답변 작성자입니다. 제공된 처리계획과 전문가 브리프를 통합해, 담당자가 거의 그대로 발송할 수 있는 완성된 답변 초안을 작성합니다.
+[작성 원칙]
+- 구성: 인사말 → 질의 요지 확인 → 항목별 답변(핵심질의마다) → 근거(법령·조항 인용) → 추가 안내/문의처 → 맺음말
+- 어조: 톤 가이드 반영. 항의·불만 민원이면 먼저 공감·유감 표명 후 사실관계 안내.
+- 정확성: 단정이 어렵거나 근거가 '추정'이면 단정하지 말고 "소관 부서(○○) 확인을 권합니다" 식으로 안내.
+- 형식: 정중한 공문체. 항목이 여러 개면 1·2·3 또는 가·나·다로 구조화. 담백·명확하게.
+순수 답변 본문만 출력하세요(머리말·JSON·설명 금지).`,
+    crit:`당신은 민원 답변 품질 검수관입니다. 초안을 근거·핵심질의와 대조해 평가하고, 미흡하면 구체적 수정지시를 내립니다.
+[루브릭 각 1~5점] 정확성 / 근거충실 / 톤적절 / 완결성(모든 질의에 답함) / 형식.
+합계 22점 이상이고 2점 이하 항목이 없으면 "통과". 아래 JSON만 출력하세요.
+{"점수":{"정확성":0,"근거충실":0,"톤적절":0,"완결성":0,"형식":0},"총평":"한두 문장","통과여부":"(통과|수정필요)","수정지시":["작성가에게 줄 구체적 지시(통과면 빈 배열)"]}`
+  };
+
+  function escapeHtml(s){return (s||"").replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+  function stripFence(t){return (t||"").replace(/^```(?:json)?\s*/i,'').replace(/```\s*$/,'').trim();}
+  function tryJSON(t){try{return JSON.parse(stripFence(t));}catch(e){const m=stripFence(t).match(/\{[\s\S]*\}/);if(m){try{return JSON.parse(m[0]);}catch(e2){}}return null;}}
+  function fmtKRW(v){return "₩"+Math.round(v).toLocaleString('ko-KR');}
+  function bigrams(s){s=(s||"").replace(/\s+/g,"");const m={};for(let i=0;i<s.length-1;i++){const g=s.substr(i,2);m[g]=(m[g]||0)+1;}return m;}
+  function cos(a,b){let dot=0,na=0,nb=0;for(const k in a){na+=a[k]*a[k];if(b[k])dot+=a[k]*b[k];}for(const k in b)nb+=b[k]*b[k];return dot/(Math.sqrt(na*nb)||1);}
+  const CORPUS=SAMPLES.map(s=>({s,bg:bigrams(s.title+" "+s.body)}));
+  function topSimilar(text,k){const q=bigrams(text);return CORPUS.map(c=>({s:c.s,score:cos(q,c.bg)})).sort((a,b)=>b.score-a.score).slice(0,k).filter(x=>x.score>0.04);}
+
+  const sampleSel=$('#sample');
+  let o0=document.createElement('option');o0.value="";o0.textContent="샘플 불러오기…";sampleSel.appendChild(o0);
+  SAMPLES.forEach((s,i)=>{const o=document.createElement('option');o.value=i;o.textContent=(i+1)+". "+s.title;sampleSel.appendChild(o);});
+  function refreshMatch(){const t=$('#minwon').value.trim();const hint=$('#match-hint');if(t.length<10){hint.textContent="";return;}const top=topSimilar(t,2);hint.innerHTML=top.length?("🔎 유사 선례 자동매칭: "+top.map(x=>`「${escapeHtml(x.s.title)}」 (${(x.score*100).toFixed(0)}%)`).join(" · ")):"🔎 유사 선례 없음 — 일반 절차로 처리합니다.";}
+  sampleSel.addEventListener('change',()=>{const v=sampleSel.value;if(v==="")return;const s=SAMPLES[+v];$('#minwon').value="[제목] "+s.title+"\n\n"+s.body;refreshMatch();sampleSel.value="";});
+  $('#minwon').addEventListener('input',refreshMatch);
+  $('#clearbtn').onclick=()=>{$('#minwon').value="";refreshMatch();$('#result').style.display='none';$('#stepper').classList.remove('show');};
+
+  const mrows=$('#modelrows');
+  ROLES.forEach(r=>{const tr=document.createElement('tr');
+    const preset=['<option value="">사용자 지정</option>'].concat(PRESET_LIST.map(p=>`<option value="${p}">${p.split('/')[1]}</option>`)).join('');
+    const fbopt=PRESET_LIST.map(p=>`<option value="${p}">${p.split('/')[1]}</option>`).join('');
+    tr.innerHTML=`<td><span class="role-badge">${r.label}</span></td><td><select class="mono preset" data-r="${r.key}">${preset}</select></td><td><input class="mono slug" data-r="${r.key}" type="text"/></td><td><input class="mono pin num-r" data-r="${r.key}" type="number" step="0.001"/></td><td><input class="mono pout num-r" data-r="${r.key}" type="number" step="0.001"/></td><td><input class="mono fb" data-r="${r.key}" type="text" list="fblist"/></td>`;
+    mrows.appendChild(tr);});
+  // datalist for fallback suggestions
+  const dl=document.createElement('datalist');dl.id="fblist";PRESET_LIST.forEach(p=>{const o=document.createElement('option');o.value=p;dl.appendChild(o);});document.body.appendChild(dl);
+  function setRole(key,slug){const r=q=>document.querySelector(`${q}[data-r="${key}"]`);r('.slug').value=slug;r('.preset').value=PRICES[slug]?slug:"";const p=PRICES[slug]||[0,0];r('.pin').value=p[0];r('.pout').value=p[1];}
+  $$('.preset').forEach(s=>s.addEventListener('change',()=>{if(s.value)setRole(s.dataset.r,s.value);}));
+  $$('.slug').forEach(inp=>inp.addEventListener('input',()=>{const k=inp.dataset.r,p=PRICES[inp.value.trim()];const sel=document.querySelector(`.preset[data-r="${k}"]`);if(p){sel.value=inp.value.trim();document.querySelector(`.pin[data-r="${k}"]`).value=p[0];document.querySelector(`.pout[data-r="${k}"]`).value=p[1];}else sel.value="";}));
+  $('#preset-cheap').onclick=()=>ROLES.forEach(r=>setRole(r.key,r.cheap));
+  $('#preset-balanced').onclick=()=>ROLES.forEach(r=>setRole(r.key,r.bal));
+  ROLES.forEach(r=>{setRole(r.key,r.cheap);document.querySelector(`.fb[data-r="${r.key}"]`).value=r.fallback;});
+  function cfg(key){const g=q=>document.querySelector(`${q}[data-r="${key}"]`).value;const r=ROLES.find(x=>x.key===key);const fb=(document.querySelector(`.fb[data-r="${key}"]`).value||"").trim();const fp=PRICES[fb]||[0,0];return {slug:g('.slug').trim(),pin:parseFloat(g('.pin'))||0,pout:parseFloat(g('.pout'))||0,fbSlug:fb,fbPin:fp[0],fbPout:fp[1],mt:r.mt,temp:r.temp};}
+
+  const prows=$('#promptrows');
+  ROLES.forEach(r=>{const d=document.createElement('details');d.className='scard';d.innerHTML=`<summary><span class="chip" style="background:var(--muted)">✎</span> ${r.label} 프롬프트</summary><div class="scard-b"><textarea class="mono prompt" data-r="${r.key}"></textarea></div>`;prows.appendChild(d);d.querySelector('textarea').value=SYS[r.key];});
+  function getPrompt(key){const t=document.querySelector(`.prompt[data-r="${key}"]`);return (t&&t.value.trim())?t.value:SYS[key];}
+
+  function keyChanged(){const k=$('#apikey').value.trim();const ok=k.length>0;$('#keystate').value=ok?"설정됨":"미설정";$('#keystate').style.color=ok?"var(--green)":"var(--red)";$('#cfg-dot').classList.toggle('ok',ok);$('#gate').classList.toggle('show',!ok&&currentScreen==='user');}
+  $('#apikey').addEventListener('input',keyChanged);
+
+  let currentScreen='user';
+  function show(which){currentScreen=which;$('#screen-user').classList.toggle('active',which==='user');$('#screen-dev').classList.toggle('active',which==='dev');$('#tab-user').classList.toggle('active',which==='user');$('#tab-dev').classList.toggle('active',which==='dev');keyChanged();window.scrollTo({top:0,behavior:'smooth'});}
+
+  let acc={usd:0,inTok:0,outTok:0,calls:[]};
+  const node=k=>document.getElementById('ag-'+k);
+  function setNode(k,cls,st){const n=node(k);n.classList.remove('run','retry','done','err');if(cls)n.classList.add(cls);n.querySelector('.st').textContent=st;}
+  function nodeCost(k,pin,pout,r,viaFb){const cost=r.inTok/1e6*pin+r.outTok/1e6*pout;node(k).querySelector('.cost').innerHTML=(viaFb?'<b>폴백</b> · ':'')+`tok ${r.inTok}/${r.outTok} · <b>$${cost.toFixed(6)}</b>`;}
+  function updMeter(){$('#m-usd').textContent="$"+acc.usd.toFixed(6);$('#m-krw').textContent=fmtKRW(acc.usd*(parseFloat($('#fx').value)||1380));$('#m-tok').textContent=`입력 ${acc.inTok.toLocaleString()} · 출력 ${acc.outTok.toLocaleString()}`;}
+  $('#fx').addEventListener('input',updMeter);
+  function uStep(n,cls,txt){const s=document.querySelector(`.step[data-step="${n}"]`);if(!s)return;s.classList.remove('run','done');if(cls)s.classList.add(cls);if(txt)s.querySelector('.s').textContent=txt;}
+  function status(t){$('#status-text').textContent=t;}
+
+  // ① 재시도 가능 여부 판정
+  function isRetryable(stat,msg){msg=(msg||"").toLowerCase();if([408,409,429,500,502,503,504].indexOf(stat)>=0)return true;return /provider returned error|overload|timeout|timed out|temporar|rate limit|too many|unavailable|capacity/.test(msg);}
+  async function rawCall(key,label,model,c,sys,user){
+    const res=await fetch(OR_URL,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+key,"HTTP-Referer":"https://claude.ai","X-Title":"Minwon Multi-Agent"},
+      body:JSON.stringify({model,temperature:c.temp,max_tokens:c.mt,messages:[{role:"system",content:sys},{role:"user",content:user}]})});
+    let data;try{data=await res.json();}catch(_){data={};}
+    if(!res.ok||data.error){const em=(data.error&&(data.error.message||data.error))||("HTTP "+res.status);const e=new Error("["+label+"] "+(typeof em==='string'?em:JSON.stringify(em)));e.status=res.status||((data.error&&data.error.code)||0);throw e;}
+    const content=data.choices&&data.choices[0]&&data.choices[0].message?data.choices[0].message.content:"";const u=data.usage||{};return {content,inTok:u.prompt_tokens||0,outTok:u.completion_tokens||0};}
+  // ① 지수 백오프 재시도
+  async function callRetry(key,label,model,c,sys,user,onRetry){
+    let last;for(let a=0;a<=2;a++){try{return await rawCall(key,label,model,c,sys,user);}catch(e){last=e;if(a<2&&isRetryable(e.status,e.message)){if(onRetry)onRetry(a+1);await sleep(500*Math.pow(2,a)+Math.random()*250);continue;}throw e;}}throw last;}
+
+  function record(label,slug,pin,pout,r){const cost=r.inTok/1e6*pin+r.outTok/1e6*pout;acc.usd+=cost;acc.inTok+=r.inTok;acc.outTok+=r.outTok;acc.calls.push({label,slug,inTok:r.inTok,outTok:r.outTok,cost});updMeter();}
+  function detail(k,obj,raw,slug,pin,pout,r,viaFb){const d=document.querySelector(`details[data-d="${k}"]`);d.querySelector('.scard-b').innerHTML=(obj!==undefined&&obj!==null)?'<pre>'+escapeHtml(JSON.stringify(obj,null,2))+'</pre>':'<div class="text">'+escapeHtml(raw)+'</div>';d.querySelector('.meta').innerHTML=(viaFb?'<b style="color:var(--amber)">폴백</b> ':'')+`${escapeHtml(slug.split('/')[1]||slug)} · tok ${r.inTok}/${r.outTok} · <b>$${(r.inTok/1e6*pin+r.outTok/1e6*pout).toFixed(6)}</b>`;}
+
+  // ②③ 재시도 + 폴백 통합
+  async function agentCall(key,roleKey,label,user){
+    setNode(roleKey,'run','진행중');emitPixel(roleKey,'PreToolUse');const c=cfg(roleKey);const sys=getPrompt(roleKey);
+    let used=c.slug,pin=c.pin,pout=c.pout,viaFb=false,r;
+    try{
+      try{
+        r=await callRetry(key,label,c.slug,c,sys,user,n=>setNode(roleKey,'retry','재시도 '+n));
+      }catch(primaryErr){
+        if(c.fbSlug&&c.fbSlug!==c.slug){
+          setNode(roleKey,'retry','폴백 전환…');
+          r=await callRetry(key,label+'(폴백)',c.fbSlug,c,sys,user,n=>setNode(roleKey,'retry','폴백 재시도 '+n));
+          used=c.fbSlug;pin=c.fbPin;pout=c.fbPout;viaFb=true;
+        }else throw primaryErr;
+      }
+      record(label,used,pin,pout,r);nodeCost(roleKey,pin,pout,r,viaFb);
+      const parsed=tryJSON(r.content);detail(roleKey,parsed,r.content,used,pin,pout,r,viaFb);
+      setNode(roleKey,'done',viaFb?'완료(폴백)':'완료');emitPixel(roleKey,'PostToolUse');emitPixel(roleKey,'Stop');
+      return {raw:r.content,json:parsed};
+    }catch(e){setNode(roleKey,'err','오류');emitPixel(roleKey,'PostToolUse');emitPixel(roleKey,'Stop');throw e;}
+  }
+
+  async function run(){
+    const key=$('#apikey').value.trim();const minwon=$('#minwon').value.trim();
+    $('#u-err').style.display='none';
+    if(!key){$('#gate').classList.add('show');return;}
+    if(!minwon){$('#u-err').textContent="민원 내용을 입력해 주세요.";$('#u-err').style.display='block';return;}
+    acc={usd:0,inTok:0,outTok:0,calls:[]};updMeter();
+    ROLES.forEach(r=>{setNode(r.key,null,'대기');node(r.key).querySelector('.cost').style.display='none';});
+    [1,2,3,4].forEach(n=>uStep(n,null,'대기'));
+    $('#result').style.display='none';$('#summary').classList.add('hidden');$('#final-edit').style.display='none';$('#final-body').style.display='';$('#editbtn').textContent='편집';
+    $('#stepper').classList.add('show');$('#spin').style.display='';
+    $('#loopbadge').classList.remove('active');$('#loopbadge').textContent="↺ 재작성 루프 (검수 미달 시, 최대 2회)";
+    const btn=$('#run');btn.disabled=true;btn.textContent="생성 중…";$('#u-time').textContent="";
+    const t0=performance.now();
+    try{
+      // 픽셀 오피스에 6개 캐릭터 등장 (SessionStart가 먼저 도착하도록 await)
+      await pixelStartAll();
+      // STEP1 — 4종 병렬 팬아웃 (조정자/분류 + 법령 + 선례 + 톤)
+      uStep(1,'run','동시 분석 중…');status("분류·법령·선례·톤을 동시에(병렬) 분석하고 있습니다…");
+      const sims=topSimilar(minwon,2);
+      const simText=sims.length?sims.map((x,i)=>`(선례${i+1}) ${x.s.title}\n${x.s.body.slice(0,380)}`).join("\n\n"):"유사 선례 없음";
+      const [orchR,law,prec,tone]=await Promise.all([
+        agentCall(key,'orch','조정자',minwon),
+        agentCall(key,'law','법령조사관',`[민원]\n${minwon}`),
+        agentCall(key,'prec','선례조사관',`[민원]\n${minwon}\n\n[유사 선례(참고)]\n${simText}`),
+        agentCall(key,'tone','톤리스크검토관',`[민원]\n${minwon}`)
+      ]);
+      const plan=orchR.json||{핵심질의:[minwon]};
+      uStep(1,'done','완료');
+
+      // STEP2 — 통합 작성 (의존성: 분석 4종 완료 후)
+      uStep(2,'run','초안 작성 중…');status("4종 분석 결과를 통합해 답변 초안을 작성하고 있습니다…");
+      const brief=`[처리계획]\n${JSON.stringify(plan)}\n\n[법령근거]\n${law.raw}\n\n[소관·선례]\n${prec.raw}\n\n[톤·리스크]\n${tone.raw}`;
+      let draft=await agentCall(key,'draft','작성가',`[민원]\n${minwon}\n\n${brief}`);
+      let draftText=draft.raw;uStep(2,'done','완료');
+
+      // STEP3 — 검수 루프 (의존성: 작성 완료 후)
+      uStep(3,'run','품질 검수 중…');status("초안의 정확성·완결성·톤을 검수하고 있습니다…");
+      const critBase=`[핵심질의]\n${JSON.stringify(plan.핵심질의||[])}\n\n[법령근거]\n${law.raw}\n\n[민원인 톤]\n${tone.raw}`;
+      let review=null,iter=0;
+      while(true){
+        const rev=await agentCall(key,'crit','검수관',`${critBase}\n\n[검수 대상 초안]\n${draftText}`);
+        review=rev.json||{통과여부:"통과",수정지시:[]};
+        const pass=(review.통과여부||"").indexOf("통과")>=0&&(review.통과여부||"").indexOf("수정")<0;
+        if(pass||iter>=2)break;
+        iter++;uStep(2,'run','보완 작성 중…');uStep(3,'run','재검수 대기…');
+        status(`검수 의견을 반영해 초안을 보완하고 있습니다… (${iter}/2)`);
+        $('#loopbadge').classList.add('active');$('#loopbadge').textContent=`↺ 재작성 (${iter}/2)`;
+        const redo=await agentCall(key,'draft','작성가(수정)',`[민원]\n${minwon}\n\n${brief}\n\n[기존 초안]\n${draftText}\n\n[검수 수정지시 — 반드시 반영]\n${(review.수정지시||[]).map(s=>"- "+s).join("\n")}`);
+        draftText=redo.raw;uStep(2,'done','완료');uStep(3,'run','품질 검수 중…');
+      }
+      uStep(3,'done','통과');
+      $('#loopbadge').classList.remove('active');$('#loopbadge').textContent=iter?`✓ 검수 통과 · ${iter}회 보완`:"✓ 검수 통과 (보완 불필요)";
+      $('#spin').style.display='none';status("완료되었습니다.");
+      renderResult(draftText,plan,law.json,prec.json,tone.json,review);renderSummary();
+      $('#result').style.display='';
+      $('#u-time').textContent=`처리 ${((performance.now()-t0)/1000).toFixed(1)}초 · ${acc.calls.length}개 호출`;
+    }catch(e){
+      $('#spin').style.display='none';
+      $('#u-err').innerHTML="<b>생성 실패:</b> "+escapeHtml(e.message)+"<br><span class='hint'>재시도·폴백 후에도 실패했습니다. 개발자 설정에서 주 모델·폴백 슬러그와 API 키를 확인해 주세요. (망분리망에서는 외부 호출이 차단될 수 있습니다.)</span>";
+      $('#u-err').style.display='block';status("처리 중 오류가 발생했습니다.");
+    }finally{btn.disabled=false;btn.textContent="답변 초안 생성";}
+  }
+
+  function pill(t,c){return `<span class="pill ${c}">${escapeHtml(t)}</span>`;}
+  function renderResult(draftText,plan,law,prec,tone,review){
+    setFinal(draftText);
+    let sum=0;if(review&&review.점수)sum=Object.values(review.점수).reduce((a,b)=>a+(+b||0),0);
+    $('#qbadge').textContent=sum?`품질 검수 ${sum}/25 통과`:"품질 검수 통과";
+    let h="";
+    const sens=plan.민감도||"일반";const sensCls=sens.indexOf("악성")>=0?"p-red":sens.indexOf("항의")>=0?"p-amber":"p-gray";
+    h+=`<div class="memo-sec"><div class="h">분류</div>${pill(plan.유형||"-","p-blue")}${pill("난이도 "+(plan.난이도||"-"),"p-gray")}${pill(sens,sensCls)}</div>`;
+    const route=(prec&&prec.이송필요)||"-";const routeCls=route.indexOf("이송")>=0?"p-amber":route.indexOf("판단")>=0?"p-purple":"p-green";
+    h+=`<div class="memo-sec"><div class="h">소관 · 이송</div>${pill("소관: "+((prec&&prec.소관부서_추정)||plan.소관판단||"확인필요"),"p-purple")}${pill("이송: "+route,routeCls)}</div>`;
+    const grounds=(law&&law.관련근거)||[];
+    if(grounds.length)h+=`<div class="memo-sec"><div class="h">인용 근거</div><ul>${grounds.map(g=>`<li>${escapeHtml(g.명칭||"")} ${escapeHtml(g.조항||"")}${g.확실성==="추정"?' <span class="pill p-amber" style="padding:1px 6px">추정</span>':''}</li>`).join("")}</ul></div>`;
+    if(tone)h+=`<div class="memo-sec"><div class="h">응대 톤</div>${pill(tone.민원인_상태||"-",(tone.민원인_상태||"").match(/분노|공격/)?"p-red":(tone.민원인_상태||"").match(/불만|항의/)?"p-amber":"p-gray")}${(tone['사과·공감_필요']||"").indexOf("예")>=0?pill("공감·유감 표명 필요","p-amber"):""}<ul>${(tone.권고사항||[]).map(x=>`<li>${escapeHtml(x)}</li>`).join("")}</ul></div>`;
+    let warns=[];if(law&&law.불확실사항)warns=warns.concat(law.불확실사항);
+    grounds.filter(g=>g.확실성==="추정").forEach(g=>warns.push(`근거 추정: ${g.명칭||""} ${g.조항||""} — 원문 확인 권장`));
+    if(route.indexOf("이송")>=0||route.indexOf("판단")>=0)warns.push("소관/이송 여부 확인 후 발송");
+    if(warns.length)h+=`<div class="memo-sec"><div class="h">⚠ 발송 전 확인</div><ul>${warns.map(w=>`<li class="warn-li">${escapeHtml(w)}</li>`).join("")}</ul></div>`;
+    if(review&&review.총평)h+=`<div class="memo-sec"><div class="h">검수 총평</div><div class="hint">${escapeHtml(review.총평)}</div></div>`;
+    $('#memo-body').innerHTML=h;
+  }
+  function renderSummary(){
+    const tb=$('#sumrows');tb.innerHTML="";
+    acc.calls.forEach(c=>{const tr=document.createElement('tr');tr.innerHTML=`<td class="lbl">${escapeHtml(c.label)}</td><td>${escapeHtml(c.slug.split('/')[1]||c.slug)}</td><td class="num-r">${c.inTok.toLocaleString()}</td><td class="num-r">${c.outTok.toLocaleString()}</td><td class="num-r">$${c.cost.toFixed(6)}</td>`;tb.appendChild(tr);});
+    $('#s-cnt').textContent=acc.calls.length+"회";$('#s-in').textContent=acc.inTok.toLocaleString();$('#s-out').textContent=acc.outTok.toLocaleString();$('#s-cost').textContent="$"+acc.usd.toFixed(6);
+    const fx=parseFloat($('#fx').value)||1380,krw=acc.usd*fx;
+    $('#cost-note').innerHTML=`민원 1건 처리 ≈ <b>${fmtKRW(krw)}</b> (환율 ${fx}원). 10,000건 ≈ <b>${fmtKRW(krw*10000)}</b>. 폴백·재시도가 발생하면 호출 수가 늘 수 있습니다.`;
+    $('#summary').classList.remove('hidden');
+  }
+
+  // ===== 엑셀/CSV 업로드 · 민원 목록 · 초안 편집 =====
+  let LOADED=[],finalText="";
+  function setFinal(t){finalText=t||"";$('#final-body').textContent=finalText;$('#doc-title').textContent="답변 초안 · "+finalText.length.toLocaleString()+"자";}
+  function fileMsg(m,err){const el=$('#file-msg');el.textContent=m||"";el.style.color=err?'var(--red)':'var(--muted)';}
+  function parseCSV(text){
+    const rows=[];let row=[],field="",i=0,inq=false;
+    text=text.replace(/\r\n/g,"\n").replace(/\r/g,"\n");
+    while(i<text.length){const ch=text[i];
+      if(inq){if(ch=='"'){if(text[i+1]=='"'){field+='"';i++;}else inq=false;}else field+=ch;}
+      else{if(ch=='"')inq=true;else if(ch==','){row.push(field);field="";}else if(ch=='\n'){row.push(field);rows.push(row);row=[];field="";}else field+=ch;}
+      i++;}
+    if(field.length||row.length){row.push(field);rows.push(row);}
+    return rows.filter(r=>r.some(c=>(c||"").trim().length));
+  }
+  function rowsToItems(rows){
+    if(!rows.length)return [];
+    let start=0,ci={no:-1,ti:-1,bo:-1};
+    const h=rows[0].map(c=>(c==null?"":c).toString().trim());
+    const hasHeader=h.some(c=>/제목|본문|내용|번호|title|body|content|subject/i.test(c));
+    if(hasHeader){start=1;h.forEach((c,idx)=>{if(/번호|no|id/i.test(c)&&ci.no<0)ci.no=idx;if(/제목|title|subject/i.test(c))ci.ti=idx;if(/본문|내용|body|content/i.test(c))ci.bo=idx;});}
+    if(ci.bo<0){const n=rows[0].length;if(n>=3){ci.no=0;ci.ti=1;ci.bo=2;}else if(n==2){ci.ti=0;ci.bo=1;}else ci.bo=0;}
+    const items=[];
+    for(let r=start;r<rows.length;r++){const row=rows[r];const body=((ci.bo>=0?row[ci.bo]:row[row.length-1])||"").toString();
+      if(!body.trim())continue;
+      items.push({no:((ci.no>=0?row[ci.no]:"")||"").toString(),title:((ci.ti>=0?row[ci.ti]:"")||"").toString(),body:body});}
+    return items;
+  }
+  function loadScript(src){return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=()=>rej(new Error('CDN 로드 실패'));document.head.appendChild(s);});}
+  async function readXlsx(file){
+    if(typeof XLSX==='undefined')await loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
+    const buf=await file.arrayBuffer();const wb=XLSX.read(buf,{type:'array'});const ws=wb.Sheets[wb.SheetNames[0]];
+    const rows=XLSX.utils.sheet_to_json(ws,{header:1,blankrows:false,defval:""});
+    return rows.map(r=>r.map(c=>c==null?"":c));
+  }
+  function renderList(items){
+    $('#mwlist-count').textContent=items.length+"건";
+    const b=$('#mwlist-body');b.innerHTML="";
+    items.forEach((it,idx)=>{const d=document.createElement('div');d.className='mwitem';
+      d.innerHTML='<span class="no">'+escapeHtml((it.no||("#"+(idx+1))).toString())+'</span><span class="ti">'+escapeHtml(it.title||it.body.slice(0,46))+'</span>';
+      d.onclick=()=>{$('#minwon').value=(it.title?("[제목] "+it.title+"\n\n"):"")+it.body;refreshMatch();fileMsg("「"+(it.title||("#"+(idx+1)))+"」 불러왔습니다. ‘답변 초안 생성’을 눌러주세요.");$('#minwon').scrollIntoView({behavior:'smooth',block:'center'});};
+      b.appendChild(d);});
+    $('#mwlist').style.display='';
+  }
+  async function handleFile(file){
+    fileMsg("불러오는 중…");
+    try{
+      const name=(file.name||"").toLowerCase();let rows;
+      if(name.endsWith('.csv'))rows=parseCSV(await file.text());
+      else rows=await readXlsx(file);
+      const items=rowsToItems(rows);
+      if(!items.length){fileMsg("불러올 민원이 없습니다. 열 구성(제목·본문)을 확인해 주세요.",true);return;}
+      LOADED=items;renderList(items);fileMsg(items.length+"건을 불러왔습니다. 아래 목록에서 선택하세요.");
+    }catch(e){fileMsg("파일을 읽지 못했습니다. 오프라인·망분리 환경에서는 엑셀을 CSV로 저장해 올려주세요. ("+(e.message||e)+")",true);}
+  }
+  (function wireUpload(){
+    const dz=$('#dropzone'),fi=$('#filein');
+    dz.onclick=()=>fi.click();
+    ['dragenter','dragover'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.add('drag');}));
+    ['dragleave','drop'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.remove('drag');}));
+    dz.addEventListener('drop',e=>{const f=e.dataTransfer.files[0];if(f)handleFile(f);});
+    fi.addEventListener('change',()=>{const f=fi.files[0];if(f)handleFile(f);fi.value="";});
+    $('#mwlist-clear').onclick=()=>{LOADED=[];$('#mwlist').style.display='none';$('#mwlist-body').innerHTML="";fileMsg("");};
+  })();
+  $('#editbtn').onclick=()=>{const ta=$('#final-edit'),view=$('#final-body');
+    if(ta.style.display==='none'){ta.value=finalText;ta.style.display='';view.style.display='none';$('#editbtn').textContent='저장';ta.focus();}
+    else{setFinal(ta.value);ta.style.display='none';view.style.display='';$('#editbtn').textContent='편집';}};
+  $('#copyfinal').onclick=()=>navigator.clipboard.writeText(finalText).then(()=>{$('#copyfinal').textContent="복사됨 ✓";setTimeout(()=>$('#copyfinal').textContent="복사",1500);});
+
+  $('#run').addEventListener('click',run);
+  refreshMatch();keyChanged();
+  return {show};
+})();
+</script>
+</body>
+</html>
