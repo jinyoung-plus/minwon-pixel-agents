@@ -5,12 +5,18 @@
 민원을 입력하고 `답변 초안 생성`을 누르면, 6개의 AI 에이전트가 각자 한 명의 직원 캐릭터가 되어 사무실에서 일합니다. 평소에는 라운지에서 대기하다가, 자기 차례가 되면 자기 책상으로 걸어가 읽고·쓰고·검수하는 모습이 그대로 화면에 나타납니다.
 
 ---
-▶ [시연 영상 보기 (docs/demo-minwon-pixel-agent.mp4)](https://github.com/jinyoung-plus/minwon-pixel-agents/blob/main/docs/demo-minwon-pixel-agent.mp4)
+
+
+https://github.com/user-attachments/assets/7fb98290-6572-4a93-94c0-f773629e85d9
+
+
+
+
 ## 시연 영상
 
 <!-- 영상은 GitHub에서 클릭 시 페이지 내 재생됩니다 -->
 
-![시연 영상](https://github.com/jinyoung-plus/minwon-pixel-agents/raw/main/docs/demo-minwon-pixel-agent.mp4)
+
 
 > (영상 파일: `docs/demo-minwon-pixel-agent.mp4`)
 
